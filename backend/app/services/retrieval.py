@@ -1,6 +1,6 @@
 from app.services.retrieval_resources import model, collection
 
-def retrieve_candidates(query: str, n: int = 20):
+def retrieve_candidates(query: str, n: int = 100):
     if not query or not query.strip():
         return []
 

@@ -144,16 +144,20 @@ Llama 3.1로 리뷰에서 자연어 쿼리를 생성하여 학습 (부정 리뷰
 
 **모델 선정**: LightGBM (Leaf-wise 방식이 상위 랭크 패턴에 집중 → NDCG@5에 더 적합)
 
-**Features** (6개):
+**Features** (10개):
 
 | Feature | 설명 |
 |---------|------|
-| `cosine_similarity` | User-Item 의미적 유사도 |
-| `price` | 가격 |
-| `rating_number` | 리뷰 수 |
-| `average_rating` | 평균 평점 |
-| `store` | 판매처 |
-| `total_helpful_votes` | 리뷰 유용성 |
+| `retrieval_score` | BGE-M3 코사인 유사도 |
+| `review_cnt` | 전체 리뷰 수 |
+| `vp_review_cnt` | 구매 인증 리뷰 수 |
+| `vp_ratio` | 구매 인증 리뷰 비율 |
+| `recent_review_cnt` | 최근 리뷰 수 |
+| `avg_rating` | 평균 평점 |
+| `rating_std` | 평점 표준 편차 |
+| `avg_review_len` | 평균 리뷰 길이 |
+| `log_median_price` | 로그 변환 중간 가격 |
+| `price_cnt` | 가격 샘플 수 |
 
 ### 🔹 추천 설명문 생성
 
@@ -173,6 +177,16 @@ pip install -r requirements.txt
 # Frontend 의존성 설치
 cd ../frontend
 npm install
+```
+
+### 환경 변수 설정
+
+추천 설명 생성에 HyperCLOVA X API가 사용됩니다. 아래 환경 변수를 설정해 주세요:
+
+```bash
+export CLOVA_URL=<HyperCLOVA X API 엔드포인트>
+export CLOVA_API_KEY=<API 키>
+export CLOVA_REQUEST_ID=<요청 ID>
 ```
 
 ### 서버 실행

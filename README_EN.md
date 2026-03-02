@@ -138,16 +138,20 @@ Natural language queries generated from reviews via Llama 3.1 (excluded: negativ
 
 **Model**: LightGBM (leaf-wise approach focuses on top-rank patterns → better suited for NDCG@5)
 
-**Features** (6):
+**Features** (10):
 
 | Feature | Description |
 |---------|-------------|
-| `cosine_similarity` | User-Item semantic similarity |
-| `price` | Price |
-| `rating_number` | Number of reviews |
-| `average_rating` | Average rating |
-| `store` | Store/brand |
-| `total_helpful_votes` | Review helpfulness |
+| `retrieval_score` | BGE-M3 cosine similarity |
+| `review_cnt` | Total review count |
+| `vp_review_cnt` | Verified purchase review count |
+| `vp_ratio` | Verified purchase ratio |
+| `recent_review_cnt` | Recent review count |
+| `avg_rating` | Average rating |
+| `rating_std` | Rating standard deviation |
+| `avg_review_len` | Average review length |
+| `log_median_price` | Log-transformed median price |
+| `price_cnt` | Number of price samples |
 
 ### 🔹 Recommendation Explanation
 
@@ -167,6 +171,16 @@ pip install -r requirements.txt
 # Install frontend dependencies
 cd ../frontend
 npm install
+```
+
+### Environment Variables
+
+HyperCLOVA X API is used to generate recommendation explanations. Set the following environment variables:
+
+```bash
+export CLOVA_URL=<HyperCLOVA X API endpoint>
+export CLOVA_API_KEY=<API key>
+export CLOVA_REQUEST_ID=<Request ID>
 ```
 
 ### Run Servers
