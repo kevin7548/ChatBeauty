@@ -420,6 +420,52 @@
   margin-top: 8px;
 }
 
+/* ===== CARD ENTRANCE ANIMATION ===== */
+.product-card {
+  animation: fadeInUp 0.4s ease-out both;
+}
+.product-card:nth-child(2) { animation-delay: 0.05s; }
+.product-card:nth-child(3) { animation-delay: 0.10s; }
+.product-card:nth-child(4) { animation-delay: 0.15s; }
+.product-card:nth-child(5) { animation-delay: 0.20s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== ERROR STATE ===== */
+.error-state {
+  text-align: center;
+  padding: 60px 24px;
+}
+.error-message {
+  font-size: 16px;
+  color: #86868b;
+  margin-bottom: 16px;
+}
+.retry-btn {
+  background: linear-gradient(135deg, #d94080, #e8588c);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.retry-btn:hover {
+  opacity: 0.85;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
   .card-inner {
