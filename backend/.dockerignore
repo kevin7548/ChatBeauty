@@ -1,0 +1,41 @@
+# Raw data and processed files (large, not needed at runtime)
+ml/data/raw/
+ml/data/processed/
+ml/data/evaluation/
+
+# Model files (mounted as volumes at runtime)
+ml/model/
+ml/data/chromadb/
+
+# Notebooks
+notebooks/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Env files
+.env
+.venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# ML training scripts (not needed at runtime)
+ml/evaluation/
+ml/scripts/
+ml/retriever/
+ml/features/
+ml/utils/
