@@ -1,4 +1,5 @@
 import logging
+import time
 
 from fastapi import APIRouter
 from app.models.schemas import RecommendRequest, RecommendResponse, ItemScore
@@ -11,13 +12,16 @@ logger = logging.getLogger(__name__)
 
 @router.post("", response_model=RecommendResponse)
 def recommend(request: RecommendRequest):
+    t0 = time.perf_counter()
     candidates = retrieve_candidates(request.user_input)
+    t1 = time.perf_counter()
 
     ranked_items = rerank_items(
         query=request.user_input,
         candidates=candidates,
         top_k=5,
     )
+    t2 = time.perf_counter()
 
     explanation_input = build_explanation_input(
         user_query=request.user_input,
@@ -25,7 +29,16 @@ def recommend(request: RecommendRequest):
     )
 
     explanations_data = generate_explanation(explanation_input)
-    
+    t3 = time.perf_counter()
+
+    latency = {
+        "retrieval_ms": round((t1 - t0) * 1000, 1),
+        "reranking_ms": round((t2 - t1) * 1000, 1),
+        "explanation_ms": round((t3 - t2) * 1000, 1),
+        "total_ms": round((t3 - t0) * 1000, 1),
+    }
+    logger.info(f"Latency breakdown: {latency}")
+
     explanations = explanations_data.get("explanations", [])
     explanation_map = {exp["item_id"]: exp["explanation"] for exp in explanations}
     formatted_recommendations = [
@@ -44,7 +57,8 @@ def recommend(request: RecommendRequest):
     ]
 
     return RecommendResponse(
-    recommendations=formatted_recommendations
+        recommendations=formatted_recommendations,
+        latency=latency,
     )
     
 def build_explanation_input(user_query: str, ranked_items: list[dict]):

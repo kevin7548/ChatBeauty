@@ -17,3 +17,4 @@ class ItemScore(BaseModel):
     
 class RecommendResponse(BaseModel):
     recommendations: List[ItemScore]
+    latency: Optional[dict] = None
