@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = ""
+description = "ChatBeauty - AI Beauty Product Recommendation Backend"
 authors = [
     {name = "geonwoo Lee",email = "gw980215@naver.com"}
 ]
@@ -10,7 +10,17 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi (>=0.128.0,<0.129.0)",
     "uvicorn (>=0.40.0,<0.41.0)",
-    "lightgbm (>=4.6.0,<5.0.0)"
+    "lightgbm (>=4.6.0,<5.0.0)",
+    "sentence-transformers (>=3.0.0)",
+    "chromadb (>=0.5.0)",
+    "pandas (>=2.2.0)",
+    "numpy (>=1.26.0)",
+    "requests (>=2.31.0)",
+    "python-dotenv (>=1.0.0)",
+    "google-generativeai (>=0.8.0)",
+    "psycopg2-binary (>=2.9.0)",
+    "pgvector (>=0.3.0)",
+    "apache-beam[gcp] (>=2.55.0)",
 ]
 
 

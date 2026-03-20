@@ -1,25 +1,18 @@
 import os
 import json
-import re
-import requests
+import logging
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
-def require_env(key: str) -> str:
-    value = os.getenv(key)
-    if not value:
-        raise RuntimeError(f"환경 변수 {key} 가 설정되지 않았습니다.")
-    return value
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise RuntimeError("환경 변수 GEMINI_API_KEY 가 설정되지 않았습니다.")
 
-CLOVA_URL = os.getenv("CLOVA_URL")
+genai.configure(api_key=GEMINI_API_KEY)
 
-HEADERS = {
-    "X-NCP-CLOVASTUDIO-REQUEST-ID": os.getenv("CLOVA_REQUEST_ID"),
-    "Authorization": f"Bearer {os.getenv('CLOVA_API_KEY')}",
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-}
 SYSTEM_PROMPT = """
 너는 쇼핑 추천 전문가야. 리랭킹된 상품 리스트와 사용자의 검색어를 분석하여, 사용자에게 이 상품이 왜 추천되었는지 '데이터에 기반해' 설명하는 역할을 수행한다.
 
@@ -49,52 +42,36 @@ SYSTEM_PROMPT = """
 }
 """
 
+_model = genai.GenerativeModel(
+    model_name="gemini-2.0-flash",
+    system_instruction=SYSTEM_PROMPT,
+    generation_config=genai.GenerationConfig(
+        temperature=0.2,
+        top_p=0.8,
+        max_output_tokens=1500,
+        response_mime_type="application/json",
+    ),
+)
+
 
 def generate_explanation(explanation_input: dict) -> dict:
-    request_data = {
-        "messages": [
-            {
-                "role": "system",
-                "content": [{"type": "text", "text": SYSTEM_PROMPT}]
-            },
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": json.dumps(explanation_input, ensure_ascii=False)}]
-            }
-        ],
-        "temperature": 0.2,
-        "maxTokens": 1500,
-        "topP": 0.8,
-        "topK": 0,
-        "repetitionPenalty": 1.1,
-        "stop": [],
-        "seed": 0
-    }
+    """
+    Generate explanations for recommended items using Gemini 2.0 Flash.
+    Signature and return format identical to the previous HyperCLOVA X version.
+    """
+    user_message = json.dumps(explanation_input, ensure_ascii=False)
 
     try:
-        response = requests.post(
-            CLOVA_URL,
-            headers=HEADERS,
-            json=request_data,
-            timeout=30
-        )
+        response = _model.generate_content(user_message)
+        raw_text = response.text
 
-        if response.status_code == 200:
-            content = response.json()
-            raw_llm_text = content.get("result", {}).get("message", {}).get("content", "")
-            
-            clean_json_str = re.sub(r'```json|```', '', raw_llm_text).strip()
-            
-            try:
-                parsed_json = json.loads(clean_json_str)
-                
-                return parsed_json
-            except Exception as e:
-                print(f"[JSON 파싱 실패] 에러: {e}")
-                return {"explanations": [{"item_id": "all", "explanation": clean_json_str}]}
-        
-        return {"explanations": []}
+        try:
+            parsed = json.loads(raw_text)
+            return parsed
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON parse failed: {e}, raw: {raw_text[:200]}")
+            return {"explanations": [{"item_id": "all", "explanation": raw_text}]}
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Gemini API error: {e}")
         return {"explanations": []}
