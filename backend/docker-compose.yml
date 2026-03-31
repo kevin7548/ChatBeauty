@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -19,7 +17,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8080:8080"
     env_file:
       - .env
     environment:
@@ -28,9 +26,9 @@ services:
       - db
     volumes:
       # Mount BGE-M3 model (read-only, needed for query encoding)
-      - ./ml/model/retrieval/bge-m3-finetuned-20260202-120852:/app/ml/model/retrieval/bge-m3-finetuned-20260202-120852:ro
+      - ./ml/model/retrieval/bge-m3-finetuned-20260202-120852:/app/ml/model-gcs/retrieval/bge-m3-finetuned-20260202-120852:ro
       # Mount LightGBM reranker model
-      - ./ml/model/reranking:/app/ml/model/reranking:ro
+      - ./ml/model/reranking:/app/ml/model-gcs/reranking:ro
     restart: unless-stopped
 
 volumes:

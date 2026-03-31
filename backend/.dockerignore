@@ -1,11 +1,6 @@
-# Raw data and processed files (large, not needed at runtime)
-ml/data/raw/
-ml/data/processed/
-ml/data/evaluation/
-
-# Model files (mounted as volumes at runtime)
+# Data files (large, not needed at runtime)
+ml/data/
 ml/model/
-ml/data/chromadb/
 
 # Notebooks
 notebooks/
@@ -32,10 +27,7 @@ env/
 # Git
 .git/
 .gitignore
+.gcloudignore
 
-# ML training scripts (not needed at runtime)
-ml/evaluation/
-ml/scripts/
-ml/retriever/
-ml/features/
-ml/utils/
+# Pipeline (not needed at runtime)
+ml/pipeline/

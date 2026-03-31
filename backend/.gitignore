@@ -23,16 +23,12 @@ ml/data/chromadb/*
 ml/data/evaluation/*
 !ml/data/evaluation/.gitkeep
 
-ml/features/*
 ml/mlruns/*
-ml/model/reranking/*
-ml/model/retrieval/*
 ml/artifacts/*
 *.db
 
-data/*
-
-models/*
+ml/model/*
+!ml/model/.gitkeep
 
 # Distribution / packaging
 .Python
@@ -203,8 +199,7 @@ pyrightconfig.json
 # trained models
 *.pkl
 backend/ml/model/
-
-models/
+ml/model/
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 # Misc
