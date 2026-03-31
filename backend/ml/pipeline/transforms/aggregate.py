@@ -189,9 +189,7 @@ class ComputeRerankingFeatures(beam.PTransform):
             reviews
             | "KeyReviewsByProduct" >> beam.Map(lambda r: (r.parent_asin, r))
             | "ComputeStats"
-            >> beam.CombinePerKey(ReviewStatsCombineFn(recent_cutoff=0)).with_defaults(
-                # Note: recent_cutoff=0 is a placeholder; we apply it in a DoFn below
-            )
+            >> beam.CombinePerKey(ReviewStatsCombineFn(recent_cutoff=0))
         )
 
         # Actually, CombinePerKey doesn't support side inputs directly.

@@ -19,7 +19,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 MODEL_PATH = os.environ.get(
     "BGE_MODEL_PATH",
-    str(BASE_DIR / "ml" / "model" / "retrieval" / "bge-m3-finetuned-20260202-120852"),
+    str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "bge-m3-finetuned-20260202-120852"),
 )
 
 DATABASE_URL = os.environ.get(

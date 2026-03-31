@@ -1,55 +1,64 @@
 #!/usr/bin/env bash
 # =============================================================
-# ChatBeauty GCP Deployment Script
-# Run this from your LOCAL machine (not the VM)
+# ChatBeauty — Cloud Run Deployment Script
+# Run this from your LOCAL machine inside backend/
 # =============================================================
 set -euo pipefail
 
 PROJECT_ID="your-gcp-project-id"    # <-- CHANGE THIS
-ZONE="asia-northeast3-a"
-VM_NAME="chatbeauty-backend"
-MACHINE_TYPE="e2-standard-2"
-DISK_SIZE="50GB"
+REGION="asia-northeast3"
+DB_INSTANCE="chatbeauty-db"
+DB_PASSWORD="your-db-password"       # <-- CHANGE THIS
+BUCKET="chatbeauty-models"
+IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/chatbeauty/backend"
 
-echo "=== Step 1: Create VM ==="
-gcloud compute instances create "$VM_NAME" \
-  --project="$PROJECT_ID" \
-  --zone="$ZONE" \
-  --machine-type="$MACHINE_TYPE" \
-  --boot-disk-size="$DISK_SIZE" \
-  --boot-disk-type=pd-ssd \
-  --image-family=ubuntu-2204-lts \
-  --image-project=ubuntu-os-cloud \
-  --tags=http-server,https-server
+echo "=== Step 1: Enable APIs ==="
+gcloud services enable \
+  run.googleapis.com \
+  sqladmin.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudbuild.googleapis.com \
+  storage.googleapis.com \
+  --project="$PROJECT_ID"
 
-echo "=== Step 2: Reserve static IP ==="
-gcloud compute addresses create chatbeauty-ip \
-  --project="$PROJECT_ID" \
-  --region=asia-northeast3
+echo "=== Step 2: Create Artifact Registry ==="
+gcloud artifacts repositories create chatbeauty \
+  --repository-format=docker \
+  --location="$REGION" \
+  --project="$PROJECT_ID" 2>/dev/null || echo "Repository already exists"
 
-STATIC_IP=$(gcloud compute addresses describe chatbeauty-ip \
-  --project="$PROJECT_ID" \
-  --region=asia-northeast3 \
-  --format='get(address)')
-echo "Static IP: $STATIC_IP"
+echo "=== Step 3: Build & push Docker image ==="
+cd "$(dirname "$0")/../backend"
+gcloud builds submit --tag "$IMAGE" --timeout=1800 --project="$PROJECT_ID"
 
-echo "=== Step 3: Firewall rules ==="
-gcloud compute firewall-rules create allow-http \
+echo "=== Step 4: Deploy to Cloud Run ==="
+gcloud run deploy chatbeauty-backend \
+  --image="$IMAGE" \
+  --region="$REGION" \
   --project="$PROJECT_ID" \
-  --allow tcp:80 \
-  --target-tags http-server 2>/dev/null || echo "Rule allow-http already exists"
+  --memory=4Gi \
+  --cpu=2 \
+  --min-instances=1 \
+  --max-instances=2 \
+  --timeout=300 \
+  --allow-unauthenticated \
+  --add-cloudsql-instances="$PROJECT_ID:$REGION:$DB_INSTANCE" \
+  --set-env-vars="DATABASE_URL=postgresql://postgres:$DB_PASSWORD@/chatbeauty?host=/cloudsql/$PROJECT_ID:$REGION:$DB_INSTANCE" \
+  --set-env-vars="GEMINI_API_KEY=$GEMINI_API_KEY" \
+  --set-env-vars="BGE_MODEL_PATH=/app/ml/model-gcs/retrieval/bge-m3-finetuned-20260202-120852" \
+  --set-env-vars="RERANK_MODEL_PATH=/app/ml/model-gcs/reranking/lgbm_reranker_current_features_v1.pkl" \
+  --execution-environment=gen2 \
+  --add-volume=name=models,type=cloud-storage,bucket="$BUCKET" \
+  --add-volume-mount=volume=models,mount-path=/app/ml/model-gcs
 
-gcloud compute firewall-rules create allow-https \
-  --project="$PROJECT_ID" \
-  --allow tcp:443 \
-  --target-tags https-server 2>/dev/null || echo "Rule allow-https already exists"
+SERVICE_URL=$(gcloud run services describe chatbeauty-backend \
+  --region="$REGION" --project="$PROJECT_ID" --format='value(status.url)')
 
 echo ""
 echo "=== Done! ==="
-echo "Static IP: $STATIC_IP"
+echo "Service URL: $SERVICE_URL"
 echo ""
 echo "Next steps:"
-echo "  1. SSH into VM:  gcloud compute ssh $VM_NAME --zone=$ZONE"
-echo "  2. Run setup-vm.sh on the VM"
-echo "  3. Upload model files to the VM"
-echo "  4. Start docker compose"
+echo "  1. Upload models to GCS:  gcloud storage cp -r ml/model/* gs://$BUCKET/"
+echo "  2. Populate database:     cloud-sql-proxy $PROJECT_ID:$REGION:$DB_INSTANCE"
+echo "  3. Verify:                curl $SERVICE_URL/health"

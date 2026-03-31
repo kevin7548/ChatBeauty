@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 RERANK_MODEL_PATH = os.environ.get(
     "RERANK_MODEL_PATH",
-    str(BASE_DIR / "ml" / "model" / "reranking" / "lgbm_reranker_current_features_v1.pkl"),
+    str(BASE_DIR / "ml" / "model-gcs" / "reranking" / "lgbm_reranker_current_features_v1.pkl"),
 )
 
 FEATURE_NAMES = [
