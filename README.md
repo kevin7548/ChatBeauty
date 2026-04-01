@@ -51,9 +51,9 @@ ChatBeauty는 자연어로 입력한 사용자 질의와 피부 정보를 기반
 
 사용자 시나리오 입력부터 추천 결과까지 3단계로 구성됩니다.
 
-1. **Retrieval**: Fine-tuned BGE-M3로 사용자 시나리오를 인코딩하고, PostgreSQL + pgvector에서 코사인 유사도 기반 Top-100 후보 추출
-2. **Re-ranking**: LightGBM (LambdaRank)으로 가격, 평점, 리뷰 수 등 메타데이터 피처를 활용하여 Top-5 선정
-3. **Explanation**: Gemini 2.0 Flash가 사용자 시나리오와 실제 리뷰 데이터를 기반으로 추천 이유를 생성
+1. **Retrieval**: Fine-tuned BGE-M3로 사용자 시나리오를 인코딩하고, PostgreSQL + pgvector에서 IVFFlat 인덱스 기반 코사인 유사도 Top-100 후보 추출
+2. **Re-ranking**: LightGBM (LambdaRank)으로 가격, 평점, 리뷰 수 등 10개 메타데이터 피처를 활용하여 Top-5 선정
+3. **Explanation**: Gemini 2.5 Flash가 사용자 시나리오와 실제 리뷰 데이터를 기반으로 5개 상품에 대한 추천 이유를 한 번의 API 호출로 생성
 
 ![Service Pipeline](images/service_pipeline.png)
 
@@ -85,6 +85,22 @@ ChatBeauty는 자연어로 입력한 사용자 질의와 피부 정보를 기반
 
 → 위 조건 중 하나라도 만족할 경우 비정상 의심 유저로 분류 → 약 0.3% 유저 데이터 제거
 
+### Data Pipeline
+
+Apache Beam 파이프라인으로 원본 데이터를 처리합니다:
+
+```
+All_Beauty.jsonl + meta_All_Beauty.jsonl
+       │
+       ▼
+  Parse → Validate → Aggregate → Join
+       │
+       ├──→ PostgreSQL (112,578 products + 메타데이터 + 리뷰 통계)
+       └──→ training_pairs.jsonl (BGE-M3 fine-tuning 학습 데이터)
+```
+
+별도 스크립트(`embed_products.py`)로 BGE-M3 임베딩을 계산하여 DB에 저장합니다.
+
 ### Database Schema
 
 ![database schema](images/data_schema.png)
@@ -113,7 +129,7 @@ ChatBeauty는 Two-Tower 기반 구조를 사용합니다.
 
 **User Tower**: 학습 시 리뷰 텍스트를 query로 사용하여 학습하고, 서비스 시 사용자가 입력한 자연어 시나리오를 query로 인코딩
 
-**Fine-tuning 방법 A — Review-based (채택)**
+**Fine-tuning 방법 — Review-based**
 
 Raw review 텍스트를 query로, item의 `embedding_text`를 positive로 사용하여 학습
 
@@ -127,22 +143,13 @@ Raw review 텍스트를 query로, item의 `embedding_text`를 positive로 사용
 | **Valid Recall@100** | 0.2015 → **0.3543** |
 | **Test Recall@100** | **0.3728** |
 
-**Fine-tuning 방법 B — Generated Query (실험)**
-
-Llama 3.1로 리뷰에서 자연어 쿼리를 생성하여 학습 (부정 리뷰 + rating < 4.0 + rating_number < 20인 경우 제외)
-
-| 항목 | 값 |
-|------|-----|
-| Training Pairs | ~100K |
-| Batch Size | 16 |
-| **Valid Recall@100** | 0.0543 → **0.1092** |
-| **Test Recall@100** | **0.1587** |
-
 ### Re-ranking
 
 1-stage Retrieval만으로는 구매 관점의 정렬이 부족하여, 후보를 정교하게 재정렬하는 2-stage 구조를 적용했습니다.
 
 **모델 선정**: LightGBM (Leaf-wise 방식이 상위 랭크 패턴에 집중 → NDCG@5에 더 적합)
+
+학습 데이터: 36.4M candidate rows (364K queries x 100 candidates)
 
 | Metric | Value |
 |--------|-------|
@@ -166,25 +173,70 @@ Llama 3.1로 리뷰에서 자연어 쿼리를 생성하여 학습 (부정 리뷰
 
 ### 추천 설명문 생성
 
-Top-5 추천 상품에 대해 **Gemini 2.0 Flash**가 사용자 입력 시나리오와 상품 메타데이터(features, details, top_reviews)를 기반으로 개인화된 추천 이유를 생성합니다.
+Top-5 추천 상품에 대해 **Gemini 2.5 Flash**가 사용자 입력 시나리오와 상품 메타데이터(features, details, top_reviews)를 기반으로 개인화된 추천 이유를 생성합니다. 5개 상품의 설명을 단일 API 호출로 처리하여 지연시간을 최소화합니다.
+
+---
+
+## Production Latency
+
+| 단계 | 시간 |
+|------|------|
+| Retrieval (pgvector IVFFlat) | ~1,100ms |
+| Reranking (LightGBM) | ~19ms |
+| Explanation (Gemini 2.5 Flash) | ~250ms |
+| **Total** | **~1,400ms** |
+
+---
+
+## Deployment Architecture
+
+```
+Vercel (Frontend)                    Google Cloud
+──────────────────                  ─────────────
+React + TypeScript   ──API call──→  Cloud Run (FastAPI)
+                                        │
+                           ┌────────────┼────────────┐
+                           ▼            ▼            ▼
+                      Cloud SQL    GCS Volume    Gemini API
+                     (pgvector)   (BGE-M3 model)  (2.5 Flash)
+                     112K products  LightGBM pkl
+```
+
+- **Frontend**: Vercel (정적 호스팅, CDN)
+- **Backend**: Cloud Run (서버리스, min-instances=1로 cold start 방지)
+- **Database**: Cloud SQL PostgreSQL 16 + pgvector (IVFFlat 인덱스)
+- **Model Storage**: GCS 버킷 → Cloud Run 볼륨 마운트
 
 ---
 
 ## Quick Start
 
-### 환경 설정
+### 로컬 실행 (Docker)
 
 ```bash
 cd backend
+docker-compose up --build -d
+docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 
-# .env 생성 후 GEMINI_API_KEY 설정
-cp .env.example .env
-
-# Docker로 실행
-docker-compose up --build
+python -m ml.pipeline.run \
+  --input-reviews=ml/data/raw/All_Beauty.jsonl \
+  --input-metadata=ml/data/raw/meta_All_Beauty.jsonl \
+  --input-keywords=ml/data/processed/keywords_train.jsonl \
+  --output-dir=ml/data/processed/beam_output \
+  --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty
 ```
 
-자세한 실행 방법은 [backend/README.md](backend/README.md)를 참고하세요.
+### Cloud Run 배포
+
+```bash
+# 이미지 빌드 (Cloud Build)
+gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/chatbeauty/backend --timeout=1800
+
+# 배포
+gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
+```
+
+자세한 배포 방법은 [deploy/setup-gcp.sh](deploy/setup-gcp.sh)를 참고하세요.
 
 ---
 
@@ -198,17 +250,18 @@ docker-compose up --build
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![LightGBM](https://img.shields.io/badge/LightGBM-02569B?style=flat)
+![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat&logo=google-cloud&logoColor=white)
 
 | 분류 | 기술 |
 |------|------|
-| **Frontend** | React, TypeScript, Vite |
-| **Backend** | FastAPI, Uvicorn |
+| **Frontend** | React, TypeScript, Vite, Vercel |
+| **Backend** | FastAPI, Uvicorn, Docker |
 | **Embedding** | BAAI/bge-m3 (fine-tuned), sentence-transformers |
-| **Database** | PostgreSQL + pgvector |
-| **LLM** | Llama 3.1:8B (키워드 추출), Gemini 2.0 Flash (추천 설명) |
+| **Database** | PostgreSQL 16 + pgvector (IVFFlat) |
+| **LLM** | Llama 3.1:8B (키워드 추출), Gemini 2.5 Flash (추천 설명) |
 | **Re-ranking** | LightGBM (LambdaRank) |
-| **Data Pipeline** | Apache Beam |
-| **Deployment** | Docker, Google Cloud Run, Cloud SQL |
+| **Data Pipeline** | Apache Beam (DirectRunner) |
+| **Deployment** | Google Cloud Run, Cloud SQL, Cloud Storage, Vercel |
 
 ---
 
@@ -218,17 +271,21 @@ docker-compose up --build
 .
 ├── backend/
 │   ├── app/                     # FastAPI API 서버
-│   │   ├── api/routes/          #   엔드포인트
+│   │   ├── api/routes/          #   /recommend 엔드포인트
 │   │   ├── services/            #   retrieval, reranking, explanation
 │   │   ├── models/              #   Pydantic 스키마
-│   │   └── middleware/          #   레이턴시 미들웨어
+│   │   └── middleware/          #   레이턴시 로깅
 │   ├── ml/
 │   │   ├── item_ranker/         #   LightGBM re-ranking 라이브러리
 │   │   ├── pipeline/            #   Apache Beam 데이터 파이프라인
+│   │   ├── scripts/             #   embed_products.py (임베딩 계산)
 │   │   └── model/               #   학습된 모델 (git 미포함)
-│   └── sql/                     # PostgreSQL 스키마
+│   ├── notebooks/               #   Colab 노트북 (LightGBM 학습, 임베딩)
+│   ├── sql/init.sql             #   PostgreSQL 스키마 + pgvector
+│   ├── Dockerfile
+│   └── docker-compose.yml
 ├── frontend/                    # React 프론트엔드
-├── deploy/                      # Cloud Run 배포 스크립트
+├── deploy/setup-gcp.sh          # Cloud Run 배포 스크립트
 ├── images/                      # README 이미지
 └── README.md
 ```
@@ -238,18 +295,21 @@ docker-compose up --build
 ## 자체 평가
 
 ### 기술적 성과
-- **2-stage 추천 파이프라인 구현**: Bi-encoder 기반 Retrieval과 LightGBM Reranking 단계를 분리하여, 대규모 아이템 환경에서도 확장 가능한 추천 구조를 구현
-- **PostgreSQL + pgvector 기반 벡터 검색**: 관계형 DB에서 메타데이터 필터링과 벡터 유사도 검색을 통합하여, 실시간 추천 응답이 가능한 구조를 설계
-- **LLM 기반 설명 가능한 추천 제공**: 추천 결과에 자연어 설명을 결합하여, 단순한 결과 제시를 넘어 사용자 이해도를 고려한 추천 시스템을 구현
-- **Cloud Run 서버리스 배포**: GCS 볼륨 마운트와 Cloud SQL을 활용한 확장 가능한 프로덕션 아키텍처 구현
+- **2-stage 추천 파이프라인 구현**: Bi-encoder 기반 Retrieval과 LightGBM Reranking 단계를 분리하여, 112K 아이템 환경에서 ~1.4초 이내 추천 응답
+- **PostgreSQL + pgvector 기반 벡터 검색**: 관계형 DB에서 메타데이터 필터링과 IVFFlat 인덱스 벡터 유사도 검색을 통합
+- **LLM 기반 설명 가능한 추천 제공**: Gemini 2.5 Flash로 5개 상품 설명을 단일 API 호출로 생성하여 지연시간 최소화
+- **서버리스 프로덕션 배포**: Cloud Run + Cloud SQL + GCS 볼륨 마운트 + Vercel로 확장 가능한 아키텍처 구현
+- **Apache Beam 데이터 파이프라인**: 리뷰/메타데이터 파싱, 검증, 집계, 조인을 자동화하여 112K 상품을 DB에 적재
 
 ### 한계점
-- 실제 서비스 로그가 없어, 오프라인 지표 중심의 제한적인 성능 평가에 머무름
+- 실제 서비스 로그가 없어, 오프라인 지표(Recall@100, NDCG@5) 중심의 제한적인 성능 평가에 머무름
 - LLM이 생성한 추천 이유에 대해 체계적인 평가 기준을 충분히 마련하지 못함
+- Retrieval 단계 지연시간(~1.1초)이 전체 응답시간의 대부분을 차지
 
 ### 향후 발전 계획
-- **사용자 행동 데이터 기반 추천 고도화**: 클릭·선택 로그를 활용한 온라인 학습 및 추천 성능 개선
+- **사용자 행동 데이터 기반 추천 고도화**: 클릭/선택 로그를 활용한 온라인 학습 및 추천 성능 개선
 - **멀티모달 확장**: 텍스트뿐만 아니라 사용자의 피부 사진을 분석하여 추천에 반영하는 멀티모달 추천 시스템으로 고도화
+- **Retrieval 최적화**: HNSW 인덱스 도입, 프로브 수 튜닝 등으로 검색 지연시간 개선
 
 ---
 

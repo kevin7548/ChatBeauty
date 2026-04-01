@@ -45,9 +45,9 @@ Rather than simply recommending popular products, the core goal is to explain:
 
 The pipeline consists of 3 stages from user scenario input to recommendation results.
 
-1. **Retrieval**: Encode user scenario with fine-tuned BGE-M3, extract Top-100 candidates from PostgreSQL + pgvector via cosine similarity
-2. **Re-ranking**: Use LightGBM (LambdaRank) with metadata features (price, rating, review count, etc.) to select Top-5
-3. **Explanation**: Gemini 2.0 Flash generates personalized recommendation reasons based on the user's scenario and actual review data
+1. **Retrieval**: Encode user scenario with fine-tuned BGE-M3, extract Top-100 candidates from PostgreSQL + pgvector via IVFFlat index cosine similarity
+2. **Re-ranking**: Use LightGBM (LambdaRank) with 10 metadata features (price, rating, review count, etc.) to select Top-5
+3. **Explanation**: Gemini 2.5 Flash generates personalized recommendation reasons for all 5 products in a single API call based on the user's scenario and actual review data
 
 ![Service Pipeline](images/service_pipeline.png)
 
@@ -78,6 +78,22 @@ The pipeline consists of 3 stages from user scenario input to recommendation res
 - Rating variance-based: users with 5+ reviews who gave identical ratings for all
 
 → Users meeting any of the above criteria were classified as suspected abnormal users → ~0.3% of user data removed
+
+### Data Pipeline
+
+Apache Beam pipeline processes raw data:
+
+```
+All_Beauty.jsonl + meta_All_Beauty.jsonl
+       │
+       ▼
+  Parse → Validate → Aggregate → Join
+       │
+       ├──→ PostgreSQL (112,578 products + metadata + review stats)
+       └──→ training_pairs.jsonl (BGE-M3 fine-tuning data)
+```
+
+A separate script (`embed_products.py`) computes BGE-M3 embeddings and stores them in the database.
 
 ### Database Schema
 
@@ -138,6 +154,8 @@ Natural language queries generated from reviews via Llama 3.1 (excluded: negativ
 
 **Model**: LightGBM (leaf-wise approach focuses on top-rank patterns → better suited for NDCG@5)
 
+Training data: 36.4M candidate rows (364K queries x 100 candidates)
+
 | Metric | Value |
 |--------|-------|
 | **NDCG@5** | 0.3655 |
@@ -160,23 +178,70 @@ Natural language queries generated from reviews via Llama 3.1 (excluded: negativ
 
 ### Recommendation Explanation
 
-For the final Top-5 products, **Gemini 2.0 Flash** generates personalized recommendation reasons based on the user's input scenario and item metadata (features, details, top_reviews).
+For the final Top-5 products, **Gemini 2.5 Flash** generates personalized recommendation reasons based on the user's input scenario and item metadata (features, details, top_reviews). All 5 explanations are generated in a single API call to minimize latency.
+
+---
+
+## Production Latency
+
+| Stage | Time |
+|-------|------|
+| Retrieval (pgvector IVFFlat) | ~1,100ms |
+| Reranking (LightGBM) | ~19ms |
+| Explanation (Gemini 2.5 Flash) | ~250ms |
+| **Total** | **~1,400ms** |
+
+---
+
+## Deployment Architecture
+
+```
+Vercel (Frontend)                    Google Cloud
+──────────────────                  ─────────────
+React + TypeScript   ──API call──→  Cloud Run (FastAPI)
+                                        │
+                           ┌────────────┼────────────┐
+                           ▼            ▼            ▼
+                      Cloud SQL    GCS Volume    Gemini API
+                     (pgvector)   (BGE-M3 model)  (2.5 Flash)
+                     112K products  LightGBM pkl
+```
+
+- **Frontend**: Vercel (static hosting, CDN)
+- **Backend**: Cloud Run (serverless, min-instances=1 to prevent cold starts)
+- **Database**: Cloud SQL PostgreSQL 16 + pgvector (IVFFlat index)
+- **Model Storage**: GCS bucket → Cloud Run volume mount
 
 ---
 
 ## Quick Start
 
+### Local (Docker)
+
 ```bash
 cd backend
+docker-compose up --build -d
+docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 
-# Create .env and set GEMINI_API_KEY
-cp .env.example .env
-
-# Run with Docker
-docker-compose up --build
+python -m ml.pipeline.run \
+  --input-reviews=ml/data/raw/All_Beauty.jsonl \
+  --input-metadata=ml/data/raw/meta_All_Beauty.jsonl \
+  --input-keywords=ml/data/processed/keywords_train.jsonl \
+  --output-dir=ml/data/processed/beam_output \
+  --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty
 ```
 
-For detailed instructions, see [backend/README.md](backend/README.md).
+### Cloud Run Deployment
+
+```bash
+# Build image (Cloud Build — no local disk needed)
+gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/chatbeauty/backend --timeout=1800
+
+# Deploy
+gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
+```
+
+See [deploy/setup-gcp.sh](deploy/setup-gcp.sh) for the full deployment script.
 
 ---
 
@@ -190,17 +255,18 @@ For detailed instructions, see [backend/README.md](backend/README.md).
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![LightGBM](https://img.shields.io/badge/LightGBM-02569B?style=flat)
+![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat&logo=google-cloud&logoColor=white)
 
 | Category | Technologies |
 |----------|-------------|
-| **Frontend** | React, TypeScript, Vite |
-| **Backend** | FastAPI, Uvicorn |
+| **Frontend** | React, TypeScript, Vite, Vercel |
+| **Backend** | FastAPI, Uvicorn, Docker |
 | **Embedding** | BAAI/bge-m3 (fine-tuned), sentence-transformers |
-| **Database** | PostgreSQL + pgvector |
-| **LLM** | Llama 3.1:8B (keyword extraction), Gemini 2.0 Flash (explanations) |
+| **Database** | PostgreSQL 16 + pgvector (IVFFlat) |
+| **LLM** | Llama 3.1:8B (keyword extraction), Gemini 2.5 Flash (explanations) |
 | **Re-ranking** | LightGBM (LambdaRank) |
-| **Data Pipeline** | Apache Beam |
-| **Deployment** | Docker, Google Cloud Run, Cloud SQL |
+| **Data Pipeline** | Apache Beam (DirectRunner) |
+| **Deployment** | Google Cloud Run, Cloud SQL, Cloud Storage, Vercel |
 
 ---
 
@@ -210,17 +276,21 @@ For detailed instructions, see [backend/README.md](backend/README.md).
 .
 ├── backend/
 │   ├── app/                     # FastAPI API server
-│   │   ├── api/routes/          #   Endpoints
-│   │   ├── services/            #   Retrieval, reranking, explanation
+│   │   ├── api/routes/          #   /recommend endpoint
+│   │   ├── services/            #   retrieval, reranking, explanation
 │   │   ├── models/              #   Pydantic schemas
-│   │   └── middleware/          #   Latency middleware
+│   │   └── middleware/          #   latency logging
 │   ├── ml/
 │   │   ├── item_ranker/         #   LightGBM re-ranking library
 │   │   ├── pipeline/            #   Apache Beam data pipeline
-│   │   └── model/               #   Trained models (not in git)
-│   └── sql/                     # PostgreSQL schema
+│   │   ├── scripts/             #   embed_products.py (embedding computation)
+│   │   └── model/               #   trained models (not in git)
+│   ├── notebooks/               #   Colab notebooks (LightGBM training, embedding)
+│   ├── sql/init.sql             #   PostgreSQL schema + pgvector
+│   ├── Dockerfile
+│   └── docker-compose.yml
 ├── frontend/                    # React frontend
-├── deploy/                      # Cloud Run deployment scripts
+├── deploy/setup-gcp.sh          # Cloud Run deployment script
 ├── images/                      # README images
 └── README.md
 ```
@@ -230,18 +300,21 @@ For detailed instructions, see [backend/README.md](backend/README.md).
 ## Evaluation
 
 ### Technical Achievements
-- **2-stage recommendation pipeline**: Separated bi-encoder retrieval and LightGBM reranking stages for a scalable recommendation architecture in large-scale item environments
-- **PostgreSQL + pgvector vector search**: Integrated metadata filtering and vector similarity search in a relational DB for real-time recommendation responses
-- **LLM-based explainable recommendations**: Combined natural language explanations with recommendation results, going beyond simple listings to a user-centric recommendation system
-- **Cloud Run serverless deployment**: Production architecture with GCS volume mounts and Cloud SQL for scalability
+- **2-stage recommendation pipeline**: Bi-encoder retrieval + LightGBM reranking delivering recommendations within ~1.4s across 112K items
+- **PostgreSQL + pgvector vector search**: Integrated metadata filtering and IVFFlat index vector similarity in a relational DB
+- **LLM-based explainable recommendations**: Gemini 2.5 Flash generates all 5 product explanations in a single API call for minimal latency
+- **Serverless production deployment**: Cloud Run + Cloud SQL + GCS volume mounts + Vercel for a scalable architecture
+- **Apache Beam data pipeline**: Automated parsing, validation, aggregation, and joining of 112K products into the database
 
 ### Limitations
-- Limited to offline metric-based evaluation due to the absence of real service logs
+- Limited to offline metric-based evaluation (Recall@100, NDCG@5) due to the absence of real service logs
 - Insufficient systematic evaluation criteria for LLM-generated recommendation explanations
+- Retrieval latency (~1.1s) dominates total response time
 
 ### Future Plans
 - **User behavior data-driven improvement**: Online learning and recommendation refinement using click/selection logs
 - **Multimodal extension**: Evolve into a multimodal recommendation system that analyzes user skin photos in addition to text
+- **Retrieval optimization**: Introduce HNSW index, tune probe count to reduce search latency
 
 ---
 

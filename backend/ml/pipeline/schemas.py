@@ -61,6 +61,7 @@ class ItemForEmbedding(NamedTuple):
     store: str
     categories: List[str]
     main_category: str
+    rating_number: int
     image: str
     details: str
     top_reviews: str
