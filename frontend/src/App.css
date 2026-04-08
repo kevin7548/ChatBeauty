@@ -478,3 +478,37 @@
   .hero h1 { font-size: 24px; }
   .hero { padding: 40px 16px 24px; }
 }
+
+/* Warmup banner — shown while the Cloud Run backend wakes from idle */
+.warmup-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 0;
+  font-size: 13px;
+  color: #6b4a00;
+  background: #fff7d6;
+  border-bottom: 1px solid #f1e1a0;
+  text-align: center;
+}
+
+.warmup-banner-failed {
+  color: #7a1f1f;
+  background: #fde5e5;
+  border-bottom-color: #f1b0b0;
+}
+
+.warmup-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9a400;
+  animation: warmup-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes warmup-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}

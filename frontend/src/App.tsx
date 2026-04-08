@@ -1,7 +1,31 @@
-import { useState } from "react";
-import { fetchRecommend } from "./api/recommend";
+import { useEffect, useRef, useState } from "react";
+import { fetchRecommend, warmUp } from "./api/recommend";
 import type { RecommendResponse } from "./types/recommend";
 import "./App.css";
+
+type WarmupStatus = "warming" | "warm" | "failed";
+
+function useLoadingMessage(isLoading: boolean): string {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 500);
+    return () => clearInterval(id);
+  }, [isLoading]);
+
+  if (elapsed < 5) return "추천 결과를 가져오고 있어요...";
+  if (elapsed < 15) return "상품을 검색하고 있어요...";
+  if (elapsed < 30) return "서버를 깨우고 있어요... 잠시만 기다려 주세요";
+  if (elapsed < 50) return "추천 모델을 불러오는 중이에요...";
+  return "거의 다 됐어요...";
+}
 
 const EXAMPLE_QUERIES = [
   "건조한 겨울철 보습 크림 추천해주세요",
@@ -41,6 +65,27 @@ function App() {
   const [result, setResult] = useState<RecommendResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warmupStatus, setWarmupStatus] = useState<WarmupStatus>("warming");
+  const warmupStartedAt = useRef<number>(Date.now());
+  const loadingMessage = useLoadingMessage(isLoading);
+
+  // Wake up the Cloud Run backend as soon as the page loads, so the
+  // ~60s cold start happens while the user is reading the hero instead
+  // of after they submit their first query.
+  useEffect(() => {
+    let cancelled = false;
+    warmupStartedAt.current = Date.now();
+    warmUp()
+      .then(() => {
+        if (!cancelled) setWarmupStatus("warm");
+      })
+      .catch(() => {
+        if (!cancelled) setWarmupStatus("failed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (input?: string) => {
     const q = input ?? query;
@@ -92,6 +137,20 @@ function App() {
         <span className="header-badge">AI Powered</span>
       </header>
 
+      {/* WARMUP BANNER — portfolio runs on Cloud Run with scale-to-zero,
+          so the first request after idle can take ~60s while the model loads. */}
+      {warmupStatus === "warming" && (
+        <div className="warmup-banner">
+          <span className="warmup-dot" />
+          서버를 준비 중이에요. 첫 요청은 최대 1분 정도 걸릴 수 있어요.
+        </div>
+      )}
+      {warmupStatus === "failed" && (
+        <div className="warmup-banner warmup-banner-failed">
+          서버 준비 중 문제가 있었어요. 검색은 가능하지만 첫 요청이 느릴 수 있어요.
+        </div>
+      )}
+
       {/* MAIN */}
       <main className="main">
         {/* HERO / EMPTY STATE */}
@@ -125,7 +184,7 @@ function App() {
               <div className="query-text">{submittedQuery}</div>
             </div>
             <div className="results-header">
-              <h2>추천 결과를 가져오고 있어요...</h2>
+              <h2>{loadingMessage}</h2>
             </div>
             <SkeletonCard />
             <SkeletonCard />

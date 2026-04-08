@@ -48,7 +48,7 @@ _model = genai.GenerativeModel(
     generation_config=genai.GenerationConfig(
         temperature=0.2,
         top_p=0.8,
-        max_output_tokens=1500,
+        max_output_tokens=8192,
         response_mime_type="application/json",
     ),
 )
@@ -69,7 +69,20 @@ def generate_explanation(explanation_input: dict) -> dict:
             parsed = json.loads(raw_text)
             return parsed
         except json.JSONDecodeError as e:
-            logger.warning(f"JSON parse failed: {e}, raw: {raw_text[:200]}")
+            finish_reason = None
+            output_tokens = None
+            try:
+                finish_reason = response.candidates[0].finish_reason
+            except Exception:
+                pass
+            try:
+                output_tokens = response.usage_metadata.candidates_token_count
+            except Exception:
+                pass
+            logger.warning(
+                f"JSON parse failed: {e} | finish_reason={finish_reason} "
+                f"| output_tokens={output_tokens} | raw[:200]={raw_text[:200]}"
+            )
             return {"explanations": [{"item_id": "all", "explanation": raw_text}]}
 
     except Exception as e:
