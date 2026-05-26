@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies via Poetry
-COPY pyproject.toml ./
+COPY backend/pyproject.toml ./
 RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
     poetry install --no-interaction --no-ansi --only main --no-root
@@ -20,7 +20,7 @@ COPY ml/item_ranker/ ml/item_ranker/
 RUN pip install -e ml/
 
 # Copy application code
-COPY app/ app/
+COPY backend/app/ app/
 
 # Models are loaded from GCS volume mount at /app/ml/model-gcs/
 # Required:

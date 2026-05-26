@@ -14,8 +14,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
     ports:
       - "8080:8080"
     env_file:
@@ -26,9 +26,9 @@ services:
       - db
     volumes:
       # Mount BGE-M3 model (read-only, needed for query encoding)
-      - ./ml/model/retrieval/bge-m3-finetuned-20260202-120852:/app/ml/model-gcs/retrieval/bge-m3-finetuned-20260202-120852:ro
+      - ../ml/model/retrieval/bge-m3-finetuned-20260202-120852:/app/ml/model-gcs/retrieval/bge-m3-finetuned-20260202-120852:ro
       # Mount LightGBM reranker model
-      - ./ml/model/reranking:/app/ml/model-gcs/reranking:ro
+      - ../ml/model/reranking:/app/ml/model-gcs/reranking:ro
     restart: unless-stopped
 
 volumes:
