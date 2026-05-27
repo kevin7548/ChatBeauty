@@ -223,6 +223,7 @@ cd backend
 docker-compose up --build -d
 docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 
+cd ..
 python -m ml.pipeline.run \
   --input-reviews=ml/data/raw/All_Beauty.jsonl \
   --input-metadata=ml/data/raw/meta_All_Beauty.jsonl \
@@ -280,15 +281,15 @@ See [deploy/setup-gcp.sh](deploy/setup-gcp.sh) for the full deployment script.
 │   │   ├── services/            #   retrieval, reranking, explanation
 │   │   ├── models/              #   Pydantic schemas
 │   │   └── middleware/          #   latency logging
-│   ├── ml/
-│   │   ├── item_ranker/         #   LightGBM re-ranking library
-│   │   ├── pipeline/            #   Apache Beam data pipeline
-│   │   ├── scripts/             #   embed_products.py (embedding computation)
-│   │   └── model/               #   trained models (not in git)
-│   ├── notebooks/               #   Colab notebooks (LightGBM training, embedding)
 │   ├── sql/init.sql             #   PostgreSQL schema + pgvector
 │   ├── Dockerfile
 │   └── docker-compose.yml
+├── ml/                          # ML pipeline & models
+│   ├── item_ranker/             #   LightGBM re-ranking library
+│   ├── pipeline/                #   Apache Beam data pipeline
+│   ├── scripts/                 #   embed_products.py (embedding computation)
+│   ├── notebooks/               #   Colab notebooks (embedding)
+│   └── model/                   #   trained models (not in git)
 ├── frontend/                    # React frontend
 ├── deploy/setup-gcp.sh          # Cloud Run deployment script
 ├── images/                      # README images

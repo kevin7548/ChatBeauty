@@ -90,10 +90,10 @@ ml/
 
 ## Commands
 
-모든 명령어는 `backend/ml/` 디렉토리에서 실행합니다.
+모든 명령어는 프로젝트 루트의 `ml/` 디렉토리에서 실행합니다.
 
 ```bash
-cd backend/ml
+cd ml
 ```
 
 ### Step 1: Extract Keywords

@@ -218,6 +218,7 @@ cd backend
 docker-compose up --build -d
 docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 
+cd ..
 python -m ml.pipeline.run \
   --input-reviews=ml/data/raw/All_Beauty.jsonl \
   --input-metadata=ml/data/raw/meta_All_Beauty.jsonl \
@@ -275,15 +276,15 @@ gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
 │   │   ├── services/            #   retrieval, reranking, explanation
 │   │   ├── models/              #   Pydantic 스키마
 │   │   └── middleware/          #   레이턴시 로깅
-│   ├── ml/
-│   │   ├── item_ranker/         #   LightGBM re-ranking 라이브러리
-│   │   ├── pipeline/            #   Apache Beam 데이터 파이프라인
-│   │   ├── scripts/             #   embed_products.py (임베딩 계산)
-│   │   └── model/               #   학습된 모델 (git 미포함)
-│   ├── notebooks/               #   Colab 노트북 (LightGBM 학습, 임베딩)
 │   ├── sql/init.sql             #   PostgreSQL 스키마 + pgvector
 │   ├── Dockerfile
 │   └── docker-compose.yml
+├── ml/                          # ML 파이프라인 및 모델
+│   ├── item_ranker/             #   LightGBM re-ranking 라이브러리
+│   ├── pipeline/                #   Apache Beam 데이터 파이프라인
+│   ├── scripts/                 #   embed_products.py (임베딩 계산)
+│   ├── notebooks/               #   Colab 노트북 (임베딩)
+│   └── model/                   #   학습된 모델 (git 미포함)
 ├── frontend/                    # React 프론트엔드
 ├── deploy/setup-gcp.sh          # Cloud Run 배포 스크립트
 ├── images/                      # README 이미지
