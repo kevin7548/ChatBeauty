@@ -22,14 +22,24 @@ Use a task-type router to decide how to handle each request:
 | `deploy` | `deploy/`, `backend/Dockerfile`, `backend/docker-compose.yml` | Cloud Run, Cloud SQL, GCS, Vercel config |
 
 ## Architecture
-### Authentication Flow
 
-### File Processing Pipeline
+ChatBeauty is an LLM/RAG beauty-product recommender. Per request, the FastAPI backend runs
+**Retrieval** (BGE-M3 + pgvector → Top-100) → **Reranking** (LightGBM → Top-5) →
+**Explanation** (Gemini 2.5 Flash, one batched call). The frontend is a React/Vite SPA; the
+`ml/` layer (Apache Beam pipeline, BGE-M3 fine-tuning, LightGBM) is offline. There is no
+authentication. Full picture: `docs/architecture.md`.
+
+Run locally: see `docs/development.md` (docker-compose for backend+db, Beam load, embed,
+`npm run dev` for frontend).
 
 ## Reference Docs
 
 Detailed specs in `docs/` - Claude reads these on-demand when relevant:
-- `docs/api-spec.md` - API endpoints, schemas, enums
-- `docs/db-schema.md` - Tables, triggers, RLS, migrations
-- `docs/frontend-architecture.md` - Routes, components, hooks, styling
-- `docs/architecture.md` - System architecture diagrams (Mermaid)
+- `docs/architecture.md` - System architecture + Mermaid diagrams; known limitations
+- `docs/backend-architecture.md` - Service layer, request orchestration, singletons
+- `docs/api-spec.md` - Endpoints, request/response schemas
+- `docs/db-schema.md` - `products` table, indexes, IVFFlat, load workflow
+- `docs/frontend-architecture.md` - SPA state, components, hooks, styling
+- `docs/ml-pipeline.md` - Beam DAG, BGE-M3 fine-tuning, LightGBM features
+- `docs/deployment.md` - Cloud Run, Cloud SQL, GCS, Vercel, env vars, secrets
+- `docs/development.md` - End-to-end local setup runbook
