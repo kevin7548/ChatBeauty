@@ -2,6 +2,11 @@
 
 LLM & RAG 기반 뷰티 제품 추천 시스템의 백엔드입니다.
 
+> 상세 스펙(단일 출처)은 `docs/`를 참고하세요:
+> [api-spec](../docs/api-spec.md) · [backend-architecture](../docs/backend-architecture.md) ·
+> [db-schema](../docs/db-schema.md) · [deployment](../docs/deployment.md) ·
+> [development](../docs/development.md). 폴더별 작업 컨텍스트는 `CLAUDE.md` 파일에 있습니다.
+
 ## Architecture Overview
 
 ```

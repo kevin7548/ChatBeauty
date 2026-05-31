@@ -13,5 +13,5 @@ Closes #
 ## Checklist
 - [ ] Self-reviewed the diff
 - [ ] Tested locally (or explain why not)
-- [ ] Updated docs / README if needed
+- [ ] Updated relevant `docs/` if API / DB schema / architecture changed
 - [ ] No unrelated changes included

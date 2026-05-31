@@ -2,6 +2,9 @@
 
 뷰티 제품 추천을 위한 ML 파이프라인입니다.
 
+> 엔지니어링 레퍼런스(Beam DAG, BGE-M3 fine-tuning, LightGBM 피처/메트릭, 모델 버전 관리)는
+> [docs/ml-pipeline.md](../docs/ml-pipeline.md)를 참고하세요.
+
 ## Directory Structure
 
 ```

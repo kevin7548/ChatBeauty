@@ -1,146 +1,59 @@
-# App - FastAPI Application
+# App — FastAPI Application
 
-뷰티 제품 추천 API 서버입니다.
+뷰티 제품 추천 API 서버입니다. 한 번의 요청에서 **Retrieval → Reranking → Explanation**
+3단계 파이프라인을 실행합니다.
+
+> 상세 스펙은 `docs/`를 참고하세요 (단일 출처):
+> API 계약은 [docs/api-spec.md](../../docs/api-spec.md),
+> 서비스 설계는 [docs/backend-architecture.md](../../docs/backend-architecture.md).
 
 ## Directory Structure
 
 ```
 app/
-├── main.py              # FastAPI 앱 진입점
-├── api/
-│   └── routes/
-│       └── recommend.py # 추천 API 엔드포인트
+├── main.py                       # FastAPI 앱, CORS, LatencyMiddleware
+├── api/routes/recommend.py       # POST /recommend 오케스트레이션
 ├── services/
-│   ├── retrieval.py     # ChromaDB에서 후보 검색
-│   ├── reranking.py     # 후보 재정렬 (LightGBM)
-│   └── explanation.py   # LLM 기반 설명 생성
-├── models/
-│   └── schemas.py       # Pydantic 요청/응답 스키마
-└── core/                # 설정 및 공통 유틸리티
+│   ├── retrieval.py              # pgvector 코사인 검색 → Top-100
+│   ├── reranking.py              # LightGBM 재정렬 → Top-5
+│   ├── explanation.py            # Gemini 2.5 Flash 설명 (5개 한 번에)
+│   └── retrieval_resources.py    # BGE-M3 모델 + DB 커넥션 풀 (싱글톤)
+├── models/schemas.py             # Pydantic 스키마
+└── middleware/latency.py         # 요청별 레이턴시 로깅
 ```
 
 ## Quick Start
 
-### 서버 실행
-
 ```bash
 cd backend
 uvicorn app.main:app --reload --port 8000
+# Swagger: http://localhost:8000/docs  ·  ReDoc: /redoc
 ```
 
-### API 문서
+## Endpoints
 
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- `POST /recommend` — 사용자 시나리오(`user_input`)로 Top-5 추천 + 설명을 반환.
+  요청 본문은 `{"user_input": "..."}`. (`top_k`는 받지 않으며 항상 5개를 반환합니다.)
+- `GET /` — `{"message": "hi"}`
+- `GET /health` — `{"status": "ok"}` (프론트엔드 warmup에 사용)
 
-## API Endpoints
-
-### `POST /recommend`
-
-사용자 시나리오를 입력받아 맞춤형 제품을 추천합니다.
-
-**Request**
-
-```json
-{
-  "user_input": "I have thin hair and looking for volumizing shampoo",
-  "top_k": 5
-}
-```
-
-**Response**
-
-```json
-{
-  "recommendations": [
-    {"item_id": "B001234567", "score": 0.95},
-    {"item_id": "B002345678", "score": 0.89},
-    ...
-  ],
-  "explanation": "추천 이유에 대한 설명..."
-}
-```
-
-### `GET /`
-
-Health check 엔드포인트
-
-**Response**
-
-```json
-{"message": "hi"}
-```
-
-## Request/Response Schemas
-
-### RecommendRequest
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `user_input` | string | (required) | 사용자의 상황/니즈 설명 |
-| `top_k` | int | 5 | 반환할 추천 개수 |
-
-### RecommendResponse
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `recommendations` | List[ItemScore] | 추천된 제품 목록 |
-| `explanation` | string | 추천 이유 설명 |
-
-### ItemScore
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `item_id` | string | 제품 ASIN |
-| `score` | float | 추천 점수 (0~1) |
+요청/응답 스키마와 예시는 [docs/api-spec.md](../../docs/api-spec.md)를 참고하세요.
 
 ## Service Layer
 
-### 1. Retrieval (`services/retrieval.py`)
-
-ChromaDB에서 사용자 쿼리와 유사한 제품 후보를 검색합니다.
-
-- Fine-tuned BGE-M3로 쿼리 인코딩
-- Cosine similarity 기반 Top-K 검색
-- 현재 Top-100 후보 반환
-
-### 2. Reranking (`services/reranking.py`)
-
-검색된 후보를 재정렬하여 최종 Top-K를 선정합니다.
-
-- LightGBM LambdaRank 모델 (TODO)
-- Features: retrieval score, price, rating, review count 등
-
-### 3. Explanation (`services/explanation.py`)
-
-최종 추천 제품에 대한 설명을 생성합니다.
-
-- LLM을 사용한 RAG 기반 설명 생성
-- 제품 메타데이터 + 리뷰 요약 활용
+1. **Retrieval** (`services/retrieval.py`) — Fine-tuned BGE-M3로 쿼리를 인코딩하고
+   PostgreSQL + pgvector에서 코사인 유사도 Top-100 후보를 검색.
+2. **Reranking** (`services/reranking.py`) — 10개 피처에 대한 LightGBM LambdaRank로
+   재정렬하여 Top-5 선정. 피처는 DB에서 단일 배치 쿼리로 조회.
+3. **Explanation** (`services/explanation.py`) — Gemini 2.5 Flash가 5개 상품 설명을
+   단일 API 호출로 생성 (한국어).
 
 ## Configuration
 
-### CORS 설정
-
-현재 `localhost:5173` (Vite dev server) 허용
-
-```python
-# main.py
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    ...
-)
-```
-
-프로덕션 배포 시 적절한 origin으로 변경 필요
+CORS는 `ALLOWED_ORIGINS`(쉼표 구분, 기본 `http://localhost:5173`)로 설정합니다.
+환경 변수 전체 목록과 배포 설정은 [docs/deployment.md](../../docs/deployment.md) 참고.
 
 ## Dependencies
 
-```
-fastapi
-uvicorn
-pydantic
-chromadb
-sentence-transformers
-```
+`backend/pyproject.toml` 참조 — fastapi, uvicorn, lightgbm, sentence-transformers,
+psycopg2-binary, pgvector, google-generativeai 등.
