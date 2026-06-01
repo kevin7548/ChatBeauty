@@ -42,12 +42,12 @@ python -m ml.scripts.embed_products \
   --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty
 ```
 
-(Or use `ml/notebooks/embed_products_colab.ipynb` on a GPU.) Then build the IVFFlat index
+(Or use `ml/notebooks/embed_products_colab.ipynb` on a GPU.) Then build the HNSW index
 once embeddings exist:
 
 ```sql
 CREATE INDEX idx_products_embedding ON products
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+  USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
 
 ## 4. Frontend

@@ -27,7 +27,7 @@ ml/
 
 > `item_ranker/` is installed (`pip install -e ml/`) and imported by `backend/app/` at
 > serve time. Keep its public API stable; keep the embedding dimension at 1024 to match the
-> `vector(1024)` column.
+> `halfvec(1024)` column.
 
 ## Beam pipeline (`ml/pipeline/run.py`)
 
@@ -67,7 +67,7 @@ python -m ml.pipeline.run \
 - Adopted (review-based): ~1M pairs, 2 epochs, batch 32, dim 1024.
   **Valid Recall@100 0.2015 → 0.3543**, Test Recall@100 0.3728.
 - Embeddings are computed by `ml/scripts/embed_products.py` and written to the `embedding`
-  column; build the IVFFlat index afterwards ([db-schema.md](db-schema.md)).
+  column; build the HNSW index afterwards ([db-schema.md](db-schema.md)).
 
 ## Reranking — LightGBM LambdaRank
 - `item_ranker/modeling/train/train_lgbm.py`; training data 36.4M candidate rows

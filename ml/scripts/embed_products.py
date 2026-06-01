@@ -63,7 +63,7 @@ def main():
     )
 
     # Write embeddings back in batches
-    update_sql = "UPDATE products SET embedding = %s::vector WHERE parent_asin = %s"
+    update_sql = "UPDATE products SET embedding = %s::halfvec WHERE parent_asin = %s"
     batch_size = 500
 
     for i in tqdm(range(0, len(asins), batch_size), desc="Writing to DB"):
@@ -81,9 +81,9 @@ def main():
     cur.close()
     conn.close()
     logger.info(f"Done. Embedded {len(asins)} products.")
-    logger.info("Now create the IVFFlat index in Cloud SQL Studio:")
+    logger.info("Now create the HNSW index in Cloud SQL Studio:")
     logger.info("  CREATE INDEX idx_products_embedding ON products")
-    logger.info("  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);")
+    logger.info("  USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);")
 
 
 if __name__ == "__main__":

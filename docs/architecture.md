@@ -58,7 +58,7 @@ flowchart TD
 
 The pipeline is offline (Apache Beam DirectRunner) and produces two things: the populated
 `products` table and the BGE-M3 fine-tuning pairs. Embeddings are computed separately by
-`ml/scripts/embed_products.py` and written back to the same table. The IVFFlat vector
+`ml/scripts/embed_products.py` and written back to the same table. The HNSW vector
 index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pipeline.md).
 
 ## Components
@@ -67,7 +67,7 @@ index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pip
 |---|---|---|---|
 | Frontend | React 19 + TypeScript + Vite (SPA) | `frontend/` | [frontend-architecture.md](frontend-architecture.md) |
 | Backend API | FastAPI + Uvicorn | `backend/app/` | [backend-architecture.md](backend-architecture.md) |
-| Database | PostgreSQL 16 + pgvector (IVFFlat) | `backend/sql/` | [db-schema.md](db-schema.md) |
+| Database | PostgreSQL 16 + pgvector (`halfvec` + HNSW) | `backend/sql/` | [db-schema.md](db-schema.md) |
 | ML | BGE-M3 (fine-tuned), LightGBM, Apache Beam | `ml/` | [ml-pipeline.md](ml-pipeline.md) |
 | Deploy | Cloud Run, Cloud SQL, GCS, Vercel | `deploy/`, `backend/Dockerfile` | [deployment.md](deployment.md) |
 
@@ -75,7 +75,7 @@ index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pip
 
 | Stage | Typical | Notes |
 |---|---|---|
-| Retrieval (pgvector IVFFlat) | ~1,100ms | dominated by query encoding + ANN search |
+| Retrieval (pgvector HNSW) | ~1,100ms | dominated by query encoding + ANN search |
 | Reranking (LightGBM) | ~19ms | one batched DB feature lookup + predict |
 | Explanation (Gemini 2.5 Flash) | ~250ms | all 5 explanations in one call |
 | **Total** | **~1,400ms** | logged per request via `LatencyMiddleware` |
@@ -99,5 +99,6 @@ rather than restating them.
   (MLflow/W&B) or production model/data-drift monitoring yet — both are future work.
 - **`top_k` is fixed at 5.** The API request has no `top_k` field and the route hardcodes
   Top-5; clients that send `top_k` are ignored (see [api-spec.md](api-spec.md)).
-- **Retrieval latency dominates** (~1.1s of ~1.4s). HNSW index / probe tuning are noted as
-  retrieval-optimization future work in the project README.
+- **Retrieval latency dominates** (~1.1s of ~1.4s), most of it query encoding. The vector
+  index is HNSW over a `halfvec(1024)` column; further `ef_search` / quantization tuning is
+  possible future work.

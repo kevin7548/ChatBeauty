@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS products (
     parent_asin       VARCHAR(20) PRIMARY KEY,
     title             TEXT NOT NULL,
     embedding_text    TEXT,
-    embedding         VECTOR(1024),
+    embedding         halfvec(1024),
 
     -- metadata for explanation
     description       TEXT,
@@ -31,9 +31,10 @@ CREATE TABLE IF NOT EXISTS products (
     rating_number     INTEGER DEFAULT 0
 );
 
--- pgvector index for cosine similarity search (build after data is loaded)
--- IVFFlat requires data to be present; run this after loading embeddings:
--- CREATE INDEX idx_products_embedding ON products USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- pgvector HNSW index for cosine similarity search (requires pgvector >= 0.7 for halfvec).
+-- HNSW does not require data to exist first, but building after the embeddings are loaded
+-- is faster. Run this after loading embeddings:
+-- CREATE INDEX idx_products_embedding ON products USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);
 
 CREATE INDEX IF NOT EXISTS idx_products_price ON products (price);
 CREATE INDEX IF NOT EXISTS idx_products_rating ON products (average_rating);

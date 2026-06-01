@@ -16,7 +16,7 @@ serving path needs no joins.
 | `parent_asin` | `VARCHAR(20)` PK | product id |
 | `title` | `TEXT NOT NULL` | product name (→ `item_name`) |
 | `embedding_text` | `TEXT` | text that was embedded (Title + keywords + summary + features) |
-| `embedding` | `VECTOR(1024)` | fine-tuned BGE-M3 embedding (cosine) |
+| `embedding` | `halfvec(1024)` | fine-tuned BGE-M3 embedding (cosine); `halfvec` (2 bytes/dim) halves storage/index RAM to fit the Supabase free tier — requires pgvector ≥ 0.7 |
 | **Explanation metadata** | | passed to Gemini |
 | `description` | `TEXT` | |
 | `features` | `TEXT` | |
@@ -53,20 +53,22 @@ idx_products_rating  ON products (average_rating)
 idx_products_store   ON products (store)
 ```
 
-The vector index is **not** created by `init.sql` — IVFFlat requires data to exist first.
-Build it after embeddings are loaded:
+The vector index is **not** created by `init.sql`. HNSW does not strictly require data to
+exist first, but building after embeddings are loaded is faster:
 
 ```sql
 CREATE INDEX idx_products_embedding ON products
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+  USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
+
+Tune recall at query time with `SET hnsw.ef_search = 100;` (vs. the Top-100 `LIMIT`).
 
 ## Load workflow
 
 1. `CREATE EXTENSION vector;` + table + B-tree indexes → apply `backend/sql/init.sql`.
 2. Populate rows + review-stat features → Beam pipeline (`ml.pipeline.run`).
 3. Compute & write `embedding` → `ml/scripts/embed_products.py` (or the Colab notebook).
-4. Build the IVFFlat index (SQL above).
+4. Build the HNSW index (SQL above).
 
 Full runbook: [development.md](development.md).
 

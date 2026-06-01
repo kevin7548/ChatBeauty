@@ -52,7 +52,7 @@ ChatBeauty는 자연어로 입력한 사용자 질의와 피부 정보를 기반
 
 사용자 시나리오 입력부터 추천 결과까지 3단계로 구성됩니다.
 
-1. **Retrieval**: Fine-tuned BGE-M3로 사용자 시나리오를 인코딩하고, PostgreSQL + pgvector에서 IVFFlat 인덱스 기반 코사인 유사도 Top-100 후보 추출
+1. **Retrieval**: Fine-tuned BGE-M3로 사용자 시나리오를 인코딩하고, PostgreSQL + pgvector에서 HNSW 인덱스 기반 코사인 유사도 Top-100 후보 추출
 2. **Re-ranking**: LightGBM (LambdaRank)으로 가격, 평점, 리뷰 수 등 10개 메타데이터 피처를 활용하여 Top-5 선정
 3. **Explanation**: Gemini 2.5 Flash가 사용자 시나리오와 실제 리뷰 데이터를 기반으로 5개 상품에 대한 추천 이유를 한 번의 API 호출로 생성
 
@@ -193,7 +193,7 @@ Top-5 추천 상품에 대해 **Gemini 2.5 Flash**가 사용자 입력 시나리
 
 | 단계 | 시간 |
 |------|------|
-| Retrieval (pgvector IVFFlat) | ~1,100ms |
+| Retrieval (pgvector HNSW) | ~1,100ms |
 | Reranking (LightGBM) | ~19ms |
 | Explanation (Gemini 2.5 Flash) | ~250ms |
 | **Total** | **~1,400ms** |
@@ -216,7 +216,7 @@ React + TypeScript   ──API call──→  Cloud Run (FastAPI)
 
 - **Frontend**: Vercel (정적 호스팅, CDN)
 - **Backend**: Cloud Run (서버리스, min-instances=1로 cold start 방지)
-- **Database**: Cloud SQL PostgreSQL 16 + pgvector (IVFFlat 인덱스)
+- **Database**: Cloud SQL PostgreSQL 16 + pgvector (`halfvec` + HNSW 인덱스)
 - **Model Storage**: GCS 버킷 → Cloud Run 볼륨 마운트
 
 ---
@@ -272,7 +272,7 @@ gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
 | **Frontend** | React, TypeScript, Vite, Vercel |
 | **Backend** | FastAPI, Uvicorn, Docker |
 | **Embedding** | BAAI/bge-m3 (fine-tuned), sentence-transformers |
-| **Database** | PostgreSQL 16 + pgvector (IVFFlat) |
+| **Database** | PostgreSQL 16 + pgvector (`halfvec` + HNSW) |
 | **LLM** | Llama 3.1:8B (키워드 추출), Gemini 2.5 Flash (추천 설명) |
 | **Re-ranking** | LightGBM (LambdaRank) |
 | **Data Pipeline** | Apache Beam (DirectRunner) |
@@ -315,7 +315,7 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 
 ### 기술적 성과
 - **2-stage 추천 파이프라인 구현**: Bi-encoder 기반 Retrieval과 LightGBM Reranking 단계를 분리하여, 112K 아이템 환경에서 ~1.4초 이내 추천 응답
-- **PostgreSQL + pgvector 기반 벡터 검색**: 관계형 DB에서 메타데이터 필터링과 IVFFlat 인덱스 벡터 유사도 검색을 통합
+- **PostgreSQL + pgvector 기반 벡터 검색**: 관계형 DB에서 메타데이터 필터링과 HNSW 인덱스 벡터 유사도 검색을 통합
 - **LLM 기반 설명 가능한 추천 제공**: Gemini 2.5 Flash로 5개 상품 설명을 단일 API 호출로 생성하여 지연시간 최소화
 - **서버리스 프로덕션 배포**: Cloud Run + Cloud SQL + GCS 볼륨 마운트 + Vercel로 확장 가능한 아키텍처 구현
 - **Apache Beam 데이터 파이프라인**: 리뷰/메타데이터 파싱, 검증, 집계, 조인을 자동화하여 112K 상품을 DB에 적재
