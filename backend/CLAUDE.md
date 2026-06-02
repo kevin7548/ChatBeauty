@@ -12,7 +12,7 @@ explanations. LightGBM reranker (imported from `ml/item_ranker`, installed via
 backend/
 ├── app/                  # FastAPI app — see backend/app/CLAUDE.md
 ├── sql/init.sql          # schema — see backend/sql/CLAUDE.md
-├── Dockerfile            # python:3.12-slim; models from GCS mount, not the image
+├── Dockerfile            # python:3.12-slim; models from local ml/model/ mount, not the image
 ├── docker-compose.yml    # local: Postgres (pgvector) + backend
 └── pyproject.toml
 ```

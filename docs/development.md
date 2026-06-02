@@ -22,6 +22,11 @@ docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 docker-compose mounts `ml/model/...` read-only into the backend at `/app/ml/model-gcs/`,
 so the models must exist locally.
 
+> **Hosted free DB option:** instead of the local docker-compose Postgres, point `DATABASE_URL`
+> at a **Supabase** free-tier project (Postgres + pgvector + `halfvec`). This is the project's
+> deployment direction since the paid GCP infra was retired — see
+> [deployment.md](deployment.md). Local docker-compose remains the simplest dev loop.
+
 ## 2. Load data (Apache Beam)
 
 From the repo root, populate `products` + review-stat features and emit training pairs:

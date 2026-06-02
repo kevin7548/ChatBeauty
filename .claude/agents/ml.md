@@ -18,7 +18,7 @@ ml/
 ├── pipeline/         # Apache Beam data pipeline (offline, training/processing)
 ├── scripts/          # embed_products.py (compute BGE-M3 embeddings → write to DB)
 ├── notebooks/        # Colab notebooks for embedding computation
-└── model/            # trained models (not in git — deployed via GCS)
+└── model/            # trained models (not in git — kept locally; loaded by the backend mount)
 ```
 
 ## Pipeline
@@ -38,4 +38,4 @@ All_Beauty.jsonl + meta_All_Beauty.jsonl
 ## Constraints
 - `item_ranker/` is imported by `backend/app/` at serve time — keep its public API stable
 - Embedding dimension must stay at 1024 to match the pgvector column
-- Model artifacts go to GCS, not into the Docker image
+- Model artifacts stay in local `ml/model/` (loaded via the backend mount), not in the Docker image
