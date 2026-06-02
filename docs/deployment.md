@@ -58,9 +58,11 @@ the models come from and where it runs**.
 - **Free always-online host → Hugging Face Docker Space (recommended).** RAM is the deciding
   factor: BGE-M3 needs ~3–4 GB loaded, so **Render (512 MB) and Fly.io (256 MB) free tiers will
   OOM on startup.** A free HF CPU Space has **16 GB RAM** and is purpose-built for models. Host
-  the FastAPI app as a Docker Space, store the fine-tuned BGE-M3 on the **HF Hub** (free model
-  repo, downloaded at startup) and commit the tiny LightGBM `.pkl` (256 KB). Free Spaces sleep
-  after ~48h idle (cold start reloads the model, ~30–60s — the frontend `warmUp()` hides it).
+  the FastAPI app as a Docker Space, with the fine-tuned BGE-M3 + LightGBM on the **HF Hub** (free
+  model repo, downloaded at startup). Ready-to-use Space files + full runbook (incl. Supabase
+  load): [`../deploy/hf-space/`](../deploy/hf-space/) and
+  [`../deploy/hf-space/DEPLOY.md`](../deploy/hf-space/DEPLOY.md). Free Spaces sleep after ~48h
+  idle and re-download the model on cold start (a few minutes; `hf_transfer` speeds it).
 
 ## Explanation — Gemini (AI Studio free tier)
 

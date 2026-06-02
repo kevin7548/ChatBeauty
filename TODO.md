@@ -60,7 +60,9 @@ domain agents in `.claude/agents/`.
       Hub** + the LightGBM `.pkl` committed (256 KB) on a Space. **Gemini** → Google AI Studio
       free-tier key. **Frontend** → Vercel (already free).
       Update env (`DATABASE_URL` → Supabase pooler URL, `BGE_MODEL_PATH` / `RERANK_MODEL_PATH` →
-      local paths). Details: [`docs/deployment.md`](docs/deployment.md).
+      local paths). **Space files + full runbook ready:** [`deploy/hf-space/`](deploy/hf-space/)
+      and [`deploy/hf-space/DEPLOY.md`](deploy/hf-space/DEPLOY.md). Details:
+      [`docs/deployment.md`](docs/deployment.md).
 
 - [x] **Step 1 — `→ backend window` — [backend][test] pytest integration test for `POST /recommend`.** ✅ Done
       Landed in `backend/tests/` (`test_recommend.py`, `conftest.py`); exercises the full
