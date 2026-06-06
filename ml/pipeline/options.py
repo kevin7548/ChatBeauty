@@ -29,8 +29,17 @@ class ChatBeautyPipelineOptions(PipelineOptions):
         )
         parser.add_argument(
             "--output-dir",
-            required=True,
-            help="Output directory for training_pairs.jsonl",
+            required=False,
+            default=None,
+            help="Output directory for training_pairs.jsonl (only needed unless "
+            "--skip-training-pairs is set)",
+        )
+        parser.add_argument(
+            "--skip-training-pairs",
+            action="store_true",
+            default=False,
+            help="Skip the training-pairs branch (CoGroupByKey + ~1M pairs + JSONL). "
+            "Use for a memory-light products-only DB load.",
         )
         parser.add_argument(
             "--database-url",

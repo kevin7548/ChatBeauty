@@ -95,11 +95,17 @@ def run(argv=None):
             logger.warning("No --database-url provided; skipping DB write.")
 
         # ── SINK: TRAINING PAIRS → JSONL ──
+        # Memory-heavy (CoGroupByKey + ~1M pairs). Skippable for a products-only DB load.
 
-        pairs = (keywords, items) | "CreatePairs" >> CreateTrainingPairs(
-            max_keywords=custom.max_keywords
-        )
-        pairs | "WritePairs" >> WriteJsonl(custom.output_dir + "/training_pairs")
+        if custom.skip_training_pairs:
+            logger.info("Skipping training-pairs branch (--skip-training-pairs).")
+        elif not custom.output_dir:
+            logger.warning("No --output-dir provided; skipping training-pairs branch.")
+        else:
+            pairs = (keywords, items) | "CreatePairs" >> CreateTrainingPairs(
+                max_keywords=custom.max_keywords
+            )
+            pairs | "WritePairs" >> WriteJsonl(custom.output_dir + "/training_pairs")
 
     logger.info("Pipeline finished.")
 
