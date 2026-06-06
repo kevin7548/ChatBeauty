@@ -24,10 +24,10 @@ RETRIEVE_SQL = """
         details,
         image,
         embedding_text,
-        1 - (embedding <=> %s::vector) AS score
+        1 - (embedding <=> %s::halfvec) AS score
     FROM products
     WHERE embedding IS NOT NULL
-    ORDER BY embedding <=> %s::vector
+    ORDER BY embedding <=> %s::halfvec
     LIMIT %s
 """
 

@@ -48,7 +48,7 @@ Rather than simply recommending popular products, the core goal is to explain:
 
 The pipeline consists of 3 stages from user scenario input to recommendation results.
 
-1. **Retrieval**: Encode user scenario with fine-tuned BGE-M3, extract Top-100 candidates from PostgreSQL + pgvector via IVFFlat index cosine similarity
+1. **Retrieval**: Encode user scenario with fine-tuned BGE-M3, extract Top-100 candidates from PostgreSQL + pgvector via HNSW index cosine similarity
 2. **Re-ranking**: Use LightGBM (LambdaRank) with 10 metadata features (price, rating, review count, etc.) to select Top-5
 3. **Explanation**: Gemini 2.5 Flash generates personalized recommendation reasons for all 5 products in a single API call based on the user's scenario and actual review data
 
@@ -189,7 +189,7 @@ For the final Top-5 products, **Gemini 2.5 Flash** generates personalized recomm
 
 | Stage | Time |
 |-------|------|
-| Retrieval (pgvector IVFFlat) | ~1,100ms |
+| Retrieval (pgvector HNSW) | ~1,100ms |
 | Reranking (LightGBM) | ~19ms |
 | Explanation (Gemini 2.5 Flash) | ~250ms |
 | **Total** | **~1,400ms** |
@@ -212,7 +212,7 @@ React + TypeScript   ──API call──→  Cloud Run (FastAPI)
 
 - **Frontend**: Vercel (static hosting, CDN)
 - **Backend**: Cloud Run (serverless, min-instances=1 to prevent cold starts)
-- **Database**: Cloud SQL PostgreSQL 16 + pgvector (IVFFlat index)
+- **Database**: Cloud SQL PostgreSQL 16 + pgvector (`halfvec` + HNSW index)
 - **Model Storage**: GCS bucket → Cloud Run volume mount
 
 ---
@@ -268,7 +268,7 @@ See [deploy/setup-gcp.sh](deploy/setup-gcp.sh) for the full deployment script.
 | **Frontend** | React, TypeScript, Vite, Vercel |
 | **Backend** | FastAPI, Uvicorn, Docker |
 | **Embedding** | BAAI/bge-m3 (fine-tuned), sentence-transformers |
-| **Database** | PostgreSQL 16 + pgvector (IVFFlat) |
+| **Database** | PostgreSQL 16 + pgvector (`halfvec` + HNSW) |
 | **LLM** | Llama 3.1:8B (keyword extraction), Gemini 2.5 Flash (explanations) |
 | **Re-ranking** | LightGBM (LambdaRank) |
 | **Data Pipeline** | Apache Beam (DirectRunner) |
@@ -311,7 +311,7 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 
 ### Technical Achievements
 - **2-stage recommendation pipeline**: Bi-encoder retrieval + LightGBM reranking delivering recommendations within ~1.4s across 112K items
-- **PostgreSQL + pgvector vector search**: Integrated metadata filtering and IVFFlat index vector similarity in a relational DB
+- **PostgreSQL + pgvector vector search**: Integrated metadata filtering and HNSW index vector similarity in a relational DB
 - **LLM-based explainable recommendations**: Gemini 2.5 Flash generates all 5 product explanations in a single API call for minimal latency
 - **Serverless production deployment**: Cloud Run + Cloud SQL + GCS volume mounts + Vercel for a scalable architecture
 - **Apache Beam data pipeline**: Automated parsing, validation, aggregation, and joining of 112K products into the database
@@ -324,7 +324,7 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 ### Future Plans
 - **User behavior data-driven improvement**: Online learning and recommendation refinement using click/selection logs
 - **Multimodal extension**: Evolve into a multimodal recommendation system that analyzes user skin photos in addition to text
-- **Retrieval optimization**: Introduce HNSW index, tune probe count to reduce search latency
+- **Retrieval optimization**: HNSW index over a `halfvec` column is in place; further tune `ef_search` / explore quantization to reduce search latency
 
 ---
 

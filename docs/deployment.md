@@ -1,79 +1,131 @@
 # Deployment
 
-Production runs on Google Cloud (backend) + Vercel (frontend). The reference script is
-`deploy/setup-gcp.sh`; the container is `backend/Dockerfile`. Local dev uses
-`backend/docker-compose.yml` (see [development.md](development.md)).
+> ⚠️ **The paid Google Cloud deployment was retired on 2026-06-02** (Cloud Run, Cloud SQL,
+> Artifact Registry, and the GCS model buckets were deleted to avoid cost). ChatBeauty now
+> targets a **free-tier-only** stack. The trained models are saved locally in `ml/model/`
+> (nothing was lost). The original GCP setup is preserved at the bottom as a historical
+> reference in case the project is ever re-platformed on paid infra.
 
-## Topology
+The project is designed to run at **$0**: frontend on Vercel (free), database on Supabase
+(free tier), the Gemini explanation step on a Google AI Studio free-tier key, and the backend
+either **locally** (the existing `backend/docker-compose.yml`) or on a free container host.
+Local dev runbook: [development.md](development.md).
+
+## Free-tier topology
 
 ```
-Vercel (React SPA) ──API──▶ Cloud Run (FastAPI)
-                                │
-                ┌───────────────┼───────────────┐
-                ▼               ▼               ▼
-           Cloud SQL        GCS volume       Gemini API
-       PostgreSQL+pgvector  BGE-M3 + LGBM    2.5 Flash
-       112K products        (mounted RO)
+Vercel (React SPA, free) ──API──▶ FastAPI backend
+                                  (local docker-compose, or free host:
+                                   Render / Fly.io / HF Spaces)
+                                       │
+                       ┌───────────────┼────────────────┐
+                       ▼               ▼                ▼
+                  Supabase         local ml/model/   Gemini API
+              Postgres+pgvector    BGE-M3 + LGBM      (AI Studio
+              (free, 500MB)        (no GCS mount)      free tier)
+              112K products
 ```
 
-## Container (`backend/Dockerfile`)
-- `python:3.12-slim`; installs `build-essential` + `libgomp1` (LightGBM).
-- Deps via Poetry (`--only main`); then `pip install -e ml/` so `item_ranker` is importable.
-- Copies `backend/app/` only. **Models are not in the image** — they come from a GCS volume
-  mounted at `/app/ml/model-gcs/`:
-  - `retrieval/bge-m3-finetuned-20260202-120852/`
-  - `reranking/lgbm_reranker_current_features_v1.pkl`
-- `CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1`.
+## Database — Supabase (free tier)
 
-## Cloud Run (`deploy/setup-gcp.sh`)
-Steps: enable APIs → create Artifact Registry (`asia-northeast3`) → build via Cloud Build
-(`gcloud builds submit`, no local Docker) → `gcloud run deploy`. Key flags:
+Supabase gives a free Postgres with `pgvector` (≥ 0.7, so `halfvec` + HNSW work). Migration:
 
-| Flag | Value |
-|---|---|
-| `--memory` / `--cpu` | `4Gi` / `2` |
-| `--min-instances` / `--max-instances` | `1` / `2` (min 1 prevents cold starts) |
-| `--timeout` | `300` |
-| `--allow-unauthenticated` | yes — public endpoint (no auth) |
-| `--add-cloudsql-instances` | Cloud SQL via private socket `/cloudsql/...` |
-| `--execution-environment` | `gen2` |
-| `--add-volume` / `--add-volume-mount` | GCS bucket `chatbeauty-models` → `/app/ml/model-gcs` |
+1. Create a free Supabase project; grab the **connection pooler** URL.
+2. Enable the extension and apply the schema:
+   `create extension if not exists vector;` then run [`../backend/sql/init.sql`](../backend/sql/init.sql).
+3. Load data + embeddings with the offline pipeline pointed at the Supabase URL
+   (Beam load → `embed_products.py`); see [development.md](development.md) steps 2–3.
+4. Build the HNSW index **after** embeddings exist:
+   `CREATE INDEX idx_products_embedding ON products USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);`
 
-Post-deploy (from the script's "Next steps"): upload models
-(`gcloud storage cp -r ml/model/* gs://chatbeauty-models/`), populate the DB via
-`cloud-sql-proxy`, then `curl $SERVICE_URL/health`.
+**Free-tier budget (500MB):** the `halfvec(1024)` column + HNSW index are the largest objects;
+this is exactly why the embedding was migrated to `halfvec` (see [db-schema.md](db-schema.md)).
+Check headroom with `pg_database_size` before adding the hybrid-retrieval GIN index
+([`../TODO.md`](../TODO.md) Step 3).
+
+## Backend — local or free host
+
+The container (`backend/Dockerfile`, `python:3.12-slim`) is unchanged; what changed is **where
+the models come from and where it runs**.
+
+- **Models:** load from the local `ml/model/` directory (mounted by docker-compose at
+  `/app/ml/model-gcs/`), **not** a GCS volume. The fine-tuned BGE-M3
+  (`retrieval/bge-m3-finetuned-20260202-120852/`) and the LightGBM
+  `reranking/lgbm_reranker_current_features_v1.pkl` already live there.
+- **Local (primary, simplest $0):** `cd backend && docker-compose up --build -d` → backend on
+  `:8080`. Models load from `ml/model/`; point `DATABASE_URL` at Supabase. For a one-off public
+  demo, expose it with a tunnel (`cloudflared` / `ngrok`).
+- **Free always-online host → Hugging Face Docker Space (recommended).** RAM is the deciding
+  factor: BGE-M3 needs ~3–4 GB loaded, so **Render (512 MB) and Fly.io (256 MB) free tiers will
+  OOM on startup.** A free HF CPU Space has **16 GB RAM** and is purpose-built for models. Host
+  the FastAPI app as a Docker Space, with the fine-tuned BGE-M3 + LightGBM on the **HF Hub** (free
+  model repo, downloaded at startup). Ready-to-use Space files + full runbook (incl. Supabase
+  load): [`../deploy/hf-space/`](../deploy/hf-space/) and
+  [`../deploy/hf-space/DEPLOY.md`](../deploy/hf-space/DEPLOY.md). Free Spaces sleep after ~48h
+  idle and re-download the model on cold start (a few minutes; `hf_transfer` speeds it).
+
+## Explanation — Gemini (AI Studio free tier)
+
+Use a **Google AI Studio** API key (free tier for Gemini 2.5 Flash), **not** a paid Vertex AI
+endpoint — that is the one usage-based charge a cloud teardown can't remove. Set it as
+`GEMINI_API_KEY`.
 
 ## Environment variables
 
-| Variable | Used by | Notes |
+| Variable | Used by | Free-tier value |
 |---|---|---|
-| `GEMINI_API_KEY` | explanation | required; service raises at import if unset |
-| `DATABASE_URL` | retrieval/reranking | default `postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty` |
-| `BGE_MODEL_PATH` | retrieval | default = GCS mount path |
-| `RERANK_MODEL_PATH` | reranking | default = GCS mount path |
-| `ALLOWED_ORIGINS` | CORS | comma-separated; set to the Vercel URL in prod |
+| `GEMINI_API_KEY` | explanation | **AI Studio** free-tier key; service raises at import if unset |
+| `DATABASE_URL` | retrieval/reranking | Supabase pooler URL (local default: `postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty`) |
+| `BGE_MODEL_PATH` | retrieval | local path under `ml/model/retrieval/...` (docker-compose mount) |
+| `RERANK_MODEL_PATH` | reranking | local path under `ml/model/reranking/...` |
+| `ALLOWED_ORIGINS` | CORS | comma-separated; the Vercel URL (and `http://localhost:5173` for dev) |
 | `DEBUG` | FastAPI | `true`/`false` |
 | `DB_PASSWORD` | docker-compose only | local Postgres password |
-| `VITE_API_URL` | frontend | Cloud Run URL (Vercel env) |
+| `VITE_API_URL` | frontend | backend URL (Vercel env) — local or free-host URL |
 
-See `backend/.env.example` and `frontend/.env.example` for templates.
+Templates: `backend/.env.example`, `frontend/.env.example`. Secrets live in `backend/.env`
+(git-ignored) locally, or the host's env-var settings (Vercel / Render / Fly secrets).
 
-## Secret management
-Today secrets reach Cloud Run as plain env vars: `setup-gcp.sh` passes `DATABASE_URL` and
-`GEMINI_API_KEY` via `--set-env-vars` (the script expects `GEMINI_API_KEY` exported in your
-shell). Locally they come from `backend/.env` (git-ignored). For production hardening,
-GCP Secret Manager (mounted as env/volume) is the recommended future step — see
-[Known limitations](architecture.md#known-limitations--future-work).
+## Frontend — Vercel (free)
+
+Static Vite build, framework defaults (no `vercel.json`). Set `VITE_API_URL` to the backend URL
+and ensure that origin is in the backend's `ALLOWED_ORIGINS`. Vercel auto-deploys on push — the
+only piece of the pipeline that was always free and stays unchanged.
 
 ## Operations & observability
-- **Logging:** `LatencyMiddleware` logs each request (`<METHOD> <path> completed in <ms>`)
-  and the route logs the per-stage `latency` breakdown; these land in Cloud Logging.
-  Responses carry an `X-Total-Latency-Ms` header.
-- **Metrics:** Cloud Run's built-in dashboards (request count, latency, CPU/memory,
-  instance count) cover the basics.
-- **Alerting:** none configured yet (future work). If this section grows, split it into a
-  dedicated `docs/observability.md`.
 
-## Frontend (Vercel)
-Static Vite build, framework defaults (no `vercel.json`). Set `VITE_API_URL` to the Cloud
-Run service URL; ensure that origin is in the backend's `ALLOWED_ORIGINS`.
+- **Logging:** `LatencyMiddleware` logs each request (`<METHOD> <path> completed in <ms>`) and
+  the route logs the per-stage `latency` breakdown; responses carry an `X-Total-Latency-Ms`
+  header. On a free host these go to that host's log viewer (or stdout locally).
+- **Metrics/alerting:** no managed dashboards on the free tier; rely on the logs + header.
+
+---
+
+<details>
+<summary>Historical reference — the retired paid GCP deployment (pre-2026-06-02)</summary>
+
+> Kept for reference only. These resources were **deleted on 2026-06-02**; do not recreate them
+> without an explicit decision to spend money. Reference script: `deploy/setup-gcp.sh`.
+
+**Topology:** Vercel SPA → Cloud Run (FastAPI) → Cloud SQL (Postgres+pgvector), GCS volume
+(BGE-M3 + LightGBM, mounted read-only at `/app/ml/model-gcs/`), Gemini 2.5 Flash.
+
+**Cloud Run (`deploy/setup-gcp.sh`):** enable APIs → create Artifact Registry (`asia-northeast3`)
+→ build via Cloud Build (`gcloud builds submit`, no local Docker) → `gcloud run deploy`. Key
+flags: `--memory 4Gi --cpu 2`, `--min-instances 1 --max-instances 2` (min 1 prevented cold
+starts — and was a constant always-on cost), `--timeout 300`, `--allow-unauthenticated`,
+`--add-cloudsql-instances` (private socket `/cloudsql/...`), `--execution-environment gen2`,
+`--add-volume`/`--add-volume-mount` for the `chatbeauty-models` GCS bucket → `/app/ml/model-gcs`.
+
+**Post-deploy:** upload models (`gcloud storage cp -r ml/model/* gs://chatbeauty-models/`),
+populate the DB via `cloud-sql-proxy`, then `curl $SERVICE_URL/health`.
+
+**Secrets:** reached Cloud Run as plain env vars via `--set-env-vars` (`DATABASE_URL`,
+`GEMINI_API_KEY`). GCP Secret Manager was noted as the future hardening step.
+
+**Cost lesson:** the biggest charges were Cloud SQL (`db-custom-2-8192` billed 24/7) and Cloud
+Run `--min-instances 1` (always warm = always billed). Artifact Registry also accumulated ~8 GB
+of old images. If re-platforming on paid infra, set `--min-instances 0`, use the smallest Cloud
+SQL tier (or stay on Supabase), prune the image repo, and set a billing budget alert.
+
+</details>

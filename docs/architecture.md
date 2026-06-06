@@ -13,15 +13,15 @@ For per-layer detail see [backend-architecture.md](backend-architecture.md),
 ```mermaid
 flowchart LR
     User([User]) --> FE[React SPA<br/>Vercel]
-    FE -- "POST /recommend" --> API[FastAPI<br/>Cloud Run]
+    FE -- "POST /recommend" --> API[FastAPI<br/>local / free host]
     subgraph Pipeline["Per-request pipeline (~1.4s)"]
         R[Retrieval<br/>BGE-M3 + pgvector<br/>~1100ms] --> RR[Reranking<br/>LightGBM<br/>~19ms] --> EX[Explanation<br/>Gemini 2.5 Flash<br/>~250ms]
     end
     API --> R
-    R <--> DB[(Cloud SQL<br/>PostgreSQL + pgvector<br/>112K products)]
+    R <--> DB[(Supabase<br/>PostgreSQL + pgvector<br/>112K products)]
     RR <--> DB
-    R -. model .- GCS[GCS volume<br/>BGE-M3 + LightGBM]
-    RR -. model .- GCS
+    R -. model .- Models[local ml/model/<br/>BGE-M3 + LightGBM]
+    RR -. model .- Models
     EX --> Gemini[Gemini 2.5 Flash API]
     API --> FE
 ```
@@ -52,13 +52,13 @@ flowchart TD
     Embed --> PG
     PG --> Cand["retrieval candidates<br/>Top-100 per query"]
     Cand --> LGBM["LightGBM LambdaRank<br/>train_lgbm.py"]
-    FT --> Models[GCS: model artifacts]
+    FT --> Models[local ml/model/ artifacts]
     LGBM --> Models
 ```
 
 The pipeline is offline (Apache Beam DirectRunner) and produces two things: the populated
 `products` table and the BGE-M3 fine-tuning pairs. Embeddings are computed separately by
-`ml/scripts/embed_products.py` and written back to the same table. The IVFFlat vector
+`ml/scripts/embed_products.py` and written back to the same table. The HNSW vector
 index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pipeline.md).
 
 ## Components
@@ -67,15 +67,15 @@ index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pip
 |---|---|---|---|
 | Frontend | React 19 + TypeScript + Vite (SPA) | `frontend/` | [frontend-architecture.md](frontend-architecture.md) |
 | Backend API | FastAPI + Uvicorn | `backend/app/` | [backend-architecture.md](backend-architecture.md) |
-| Database | PostgreSQL 16 + pgvector (IVFFlat) | `backend/sql/` | [db-schema.md](db-schema.md) |
+| Database | PostgreSQL 16 + pgvector (`halfvec` + HNSW) | `backend/sql/` | [db-schema.md](db-schema.md) |
 | ML | BGE-M3 (fine-tuned), LightGBM, Apache Beam | `ml/` | [ml-pipeline.md](ml-pipeline.md) |
-| Deploy | Cloud Run, Cloud SQL, GCS, Vercel | `deploy/`, `backend/Dockerfile` | [deployment.md](deployment.md) |
+| Deploy | Free-tier: Supabase (DB) + local/free-host backend + Vercel (paid GCP retired 2026-06-02) | `deploy/`, `backend/Dockerfile` | [deployment.md](deployment.md) |
 
 ## Latency budget
 
 | Stage | Typical | Notes |
 |---|---|---|
-| Retrieval (pgvector IVFFlat) | ~1,100ms | dominated by query encoding + ANN search |
+| Retrieval (pgvector HNSW) | ~1,100ms | dominated by query encoding + ANN search |
 | Reranking (LightGBM) | ~19ms | one batched DB feature lookup + predict |
 | Explanation (Gemini 2.5 Flash) | ~250ms | all 5 explanations in one call |
 | **Total** | **~1,400ms** | logged per request via `LatencyMiddleware` |
@@ -85,19 +85,19 @@ index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pip
 These are the current, deliberate constraints of the system. Detailed docs link here
 rather than restating them.
 
-- **No authentication / rate limiting.** `/recommend` is public and unauthenticated
-  (`--allow-unauthenticated` on Cloud Run). A public, unauthenticated endpoint is exposed
-  to abuse; API rate limiting is future work.
+- **No authentication / rate limiting.** `/recommend` is a single public, unauthenticated
+  endpoint. On any public (free) host this is exposed to abuse; API rate limiting is future work.
 - **No automated tests.** There is no pytest/vitest suite today; changes are verified by
   running the stack and exercising `/health` + a sample `/recommend` (see
   [development.md](development.md)). *Planned:* an integration test for `POST /recommend`.
 - **No DB migration tool.** Schema is applied by running `backend/sql/init.sql` directly;
   there is no Alembic/migration history. Adopting a migration tool is a future option
   (see [db-schema.md](db-schema.md)).
-- **MLOps maturity.** Model versioning is by GCS path convention (e.g. the timestamped
-  `bge-m3-finetuned-20260202-120852/` directory); there is no experiment tracking
+- **MLOps maturity.** Model versioning is by local-path convention (e.g. the timestamped
+  `ml/model/retrieval/bge-m3-finetuned-20260202-120852/` directory); there is no experiment tracking
   (MLflow/W&B) or production model/data-drift monitoring yet — both are future work.
 - **`top_k` is fixed at 5.** The API request has no `top_k` field and the route hardcodes
   Top-5; clients that send `top_k` are ignored (see [api-spec.md](api-spec.md)).
-- **Retrieval latency dominates** (~1.1s of ~1.4s). HNSW index / probe tuning are noted as
-  retrieval-optimization future work in the project README.
+- **Retrieval latency dominates** (~1.1s of ~1.4s), most of it query encoding. The vector
+  index is HNSW over a `halfvec(1024)` column; further `ef_search` / quantization tuning is
+  possible future work.

@@ -22,6 +22,11 @@ docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 docker-compose mounts `ml/model/...` read-only into the backend at `/app/ml/model-gcs/`,
 so the models must exist locally.
 
+> **Hosted free DB option:** instead of the local docker-compose Postgres, point `DATABASE_URL`
+> at a **Supabase** free-tier project (Postgres + pgvector + `halfvec`). This is the project's
+> deployment direction since the paid GCP infra was retired — see
+> [deployment.md](deployment.md). Local docker-compose remains the simplest dev loop.
+
 ## 2. Load data (Apache Beam)
 
 From the repo root, populate `products` + review-stat features and emit training pairs:
@@ -42,12 +47,12 @@ python -m ml.scripts.embed_products \
   --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty
 ```
 
-(Or use `ml/notebooks/embed_products_colab.ipynb` on a GPU.) Then build the IVFFlat index
+(Or use `ml/notebooks/embed_products_colab.ipynb` on a GPU.) Then build the HNSW index
 once embeddings exist:
 
 ```sql
 CREATE INDEX idx_products_embedding ON products
-  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+  USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
 
 ## 4. Frontend

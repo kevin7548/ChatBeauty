@@ -67,8 +67,8 @@ The response carries `recommendations` plus a `latency` dict
 ### retrieval_resources.py (shared singletons)
 - Loads the BGE-M3 `SentenceTransformer` once from `BGE_MODEL_PATH`.
 - Holds a `psycopg2` `ThreadedConnectionPool` (min 1, max 5) with TCP keepalives
-  (`keepalives_idle=30`, `interval=10`, `count=3`) — Cloud Run pauses idle instances and
-  can silently kill pooled sockets.
+  (`keepalives_idle=30`, `interval=10`, `count=3`) — idle/spun-down hosts (and Supabase's
+  connection pooler) can silently kill pooled sockets.
 - `get_db_connection()` runs a `SELECT 1` liveness check and transparently replaces a dead
   connection; `release_db_connection()` returns it to the pool.
 
@@ -83,5 +83,5 @@ The response carries `recommendations` plus a `latency` dict
 - **Latency middleware:** `LatencyMiddleware` adds an `X-Total-Latency-Ms` response header
   and logs `"<METHOD> <path> completed in <ms>ms"` for every request.
 - **Constraints to preserve:** keep all 5 explanations in one Gemini call; the embedding
-  dimension must stay 1024 to match the `vector(1024)` column; model files come from the
-  GCS volume mount, not the image.
+  dimension must stay 1024 to match the `halfvec(1024)` column; model files come from the
+  local `ml/model/` mount, not the image.

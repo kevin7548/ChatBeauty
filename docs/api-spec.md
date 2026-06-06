@@ -3,8 +3,9 @@
 Backend HTTP API. Source of truth: `backend/app/api/routes/recommend.py` and
 `backend/app/models/schemas.py`. Interactive docs at `/docs` (Swagger) and `/redoc`.
 
-Base URL (production): the Cloud Run service URL; local dev: `http://localhost:8000`
-(uvicorn) or `:8080` (docker-compose).
+Base URL: the deployed backend URL (local docker-compose or a free host — the paid Cloud Run
+deployment was retired 2026-06-02); local dev: `http://localhost:8000` (uvicorn) or `:8080`
+(docker-compose).
 
 ## Endpoints
 

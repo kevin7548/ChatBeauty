@@ -43,10 +43,10 @@ re-entrancy while loading.
 - `fetchRecommend(payload)` → `POST {API_BASE}/recommend`. The payload includes
   `top_k: 5`, but **the backend ignores `top_k`** (see [api-spec.md](api-spec.md)); the
   TS `RecommendResponse` also omits the backend's `latency` field — harmless, just unused.
-- `warmUp()` → `GET {API_BASE}/health`, called once on mount to wake the Cloud Run
-  instance while the user reads the hero, hiding cold-start latency. (The code comment says
-  `min-instances=0`; the deployed config in `deploy/setup-gcp.sh` is `min-instances=1`, so
-  warmup mainly covers post-deploy / scaled-down gaps.)
+- `warmUp()` → `GET {API_BASE}/health`, called once on mount to wake an idle/cold backend
+  instance while the user reads the hero, hiding cold-start latency. (Free hosts like
+  Render / Fly.io / HF Spaces idle-spin-down, so this matters again; the old Cloud Run
+  `min-instances=1` config was retired 2026-06-02.)
 
 ## UX helpers
 - `useLoadingMessage(isLoading)` rotates Korean status messages by elapsed seconds

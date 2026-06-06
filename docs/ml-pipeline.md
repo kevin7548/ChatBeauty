@@ -20,14 +20,14 @@ ml/
 │   └── modeling/{train,predict}/   # train_lgbm.py / train_xgb.py, lgbm.py / xgb.py
 ├── scripts/embed_products.py       # compute BGE-M3 embeddings → PostgreSQL
 ├── notebooks/             # Colab (GPU embedding / training)
-└── model/                 # trained artifacts (not in git; deployed via GCS)
+└── model/                 # trained artifacts (not in git; kept locally, loaded by backend mount)
     ├── retrieval/bge-m3-finetuned-<timestamp>/
     └── reranking/lgbm_reranker_current_features_v1.pkl
 ```
 
 > `item_ranker/` is installed (`pip install -e ml/`) and imported by `backend/app/` at
 > serve time. Keep its public API stable; keep the embedding dimension at 1024 to match the
-> `vector(1024)` column.
+> `halfvec(1024)` column.
 
 ## Beam pipeline (`ml/pipeline/run.py`)
 
@@ -67,7 +67,7 @@ python -m ml.pipeline.run \
 - Adopted (review-based): ~1M pairs, 2 epochs, batch 32, dim 1024.
   **Valid Recall@100 0.2015 → 0.3543**, Test Recall@100 0.3728.
 - Embeddings are computed by `ml/scripts/embed_products.py` and written to the `embedding`
-  column; build the IVFFlat index afterwards ([db-schema.md](db-schema.md)).
+  column; build the HNSW index afterwards ([db-schema.md](db-schema.md)).
 
 ## Reranking — LightGBM LambdaRank
 - `item_ranker/modeling/train/train_lgbm.py`; training data 36.4M candidate rows
@@ -92,9 +92,9 @@ python -m ml.pipeline.run \
   read from PostgreSQL (`backend/app/services/reranking.py`) — keep the two in sync.
 
 ## Model artifacts & versioning
-- Versioning is by **GCS path convention** (e.g. the timestamped
-  `bge-m3-finetuned-20260202-120852/` dir, `..._v1.pkl`). No experiment tracking or
-  drift monitoring yet — see
+- Versioning is by **local-path convention** (e.g. the timestamped
+  `ml/model/retrieval/bge-m3-finetuned-20260202-120852/` dir, `..._v1.pkl`). No experiment
+  tracking or drift monitoring yet — see
   [Known limitations](architecture.md#known-limitations--future-work).
-- Artifacts live in GCS and are volume-mounted into Cloud Run, not baked into the image
-  ([deployment.md](deployment.md)).
+- Artifacts live in local `ml/model/` and are volume-mounted into the backend, not baked into
+  the image (the paid GCS bucket was retired 2026-06-02; see [deployment.md](deployment.md)).
