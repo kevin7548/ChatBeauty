@@ -16,6 +16,8 @@ ChatBeauty는 사용자의 피부 타입, 피부 고민, 선호 조건을 기반
 
 ## Demo
 
+**라이브:** https://chatbeauty-mu.vercel.app (무료 티어 — 유휴 후 첫 요청은 콜드 스타트가 있을 수 있음)
+
 ![ChatBeauty Demo](images/demo_video.gif)
 
 [Demo Video (YouTube)](https://youtu.be/g0UO8cHWX9I)
@@ -52,7 +54,7 @@ ChatBeauty는 자연어로 입력한 사용자 질의와 피부 정보를 기반
 
 사용자 시나리오 입력부터 추천 결과까지 3단계로 구성됩니다.
 
-1. **Retrieval**: Fine-tuned BGE-M3로 사용자 시나리오를 인코딩하고, PostgreSQL + pgvector에서 HNSW 인덱스 기반 코사인 유사도 Top-100 후보 추출
+1. **Retrieval**: Fine-tuned BGE-M3로 사용자 시나리오를 인코딩하고, **인메모리 FAISS HNSW 인덱스**로 코사인 유사도 Top-100 후보를 검색한 뒤 메타데이터는 PostgreSQL에서 조회
 2. **Re-ranking**: LightGBM (LambdaRank)으로 가격, 평점, 리뷰 수 등 10개 메타데이터 피처를 활용하여 Top-5 선정
 3. **Explanation**: Gemini 2.5 Flash가 사용자 시나리오와 실제 리뷰 데이터를 기반으로 5개 상품에 대한 추천 이유를 한 번의 API 호출로 생성
 
@@ -191,33 +193,47 @@ Top-5 추천 상품에 대해 **Gemini 2.5 Flash**가 사용자 입력 시나리
 
 ## Production Latency
 
+무료 티어 Hugging Face Space(공유 CPU) 기준 측정값:
+
 | 단계 | 시간 |
 |------|------|
-| Retrieval (pgvector HNSW) | ~1,100ms |
-| Reranking (LightGBM) | ~19ms |
-| Explanation (Gemini 2.5 Flash) | ~250ms |
-| **Total** | **~1,400ms** |
+| Retrieval (BGE-M3 인코딩 + 인메모리 FAISS) | ~1,600ms |
+| Reranking (LightGBM) | ~850ms |
+| Explanation (Gemini 2.5 Flash, thinking off) | ~2,400ms |
+| **Total** | **~4,800ms** |
+
+> 기존 ~1.4초는 유료 Cloud Run(폐기됨) 기준이었습니다. 무료 공유 CPU에서는 BGE-M3 쿼리 인코딩과
+> Gemini 호출이 지연을 좌우하며, 둘 다 `TODO.md`의 최적화 항목(ONNX 쿼리 인코더 등)으로 추적 중입니다.
 
 ---
 
-## Deployment Architecture
+## Deployment Architecture (무료 티어, $0)
+
+> 유료 Google Cloud 배포(Cloud Run / Cloud SQL / GCS)는 비용 절감을 위해 2026-06-02에 폐기했습니다.
+> 현재는 전부 무료 티어에서 동작합니다.
 
 ```
-Vercel (Frontend)                    Google Cloud
-──────────────────                  ─────────────
-React + TypeScript   ──API call──→  Cloud Run (FastAPI)
-                                        │
-                           ┌────────────┼────────────┐
-                           ▼            ▼            ▼
-                      Cloud SQL    GCS Volume    Gemini API
-                     (pgvector)   (BGE-M3 model)  (2.5 Flash)
-                     112K products  LightGBM pkl
+Vercel (Frontend)                 Hugging Face Space (Docker, FastAPI)
+──────────────────               ─────────────────────────────────────
+React + TypeScript  ──API call──▶ 인메모리 FAISS ─▶ Top-100 asins
+                                        │                  │
+                          ┌─────────────┼──────────────────┤
+                          ▼             ▼                  ▼
+                     Supabase      HF Hub (모델 +      Gemini API
+                  Postgres+pgvector  FAISS 인덱스,       (2.5 Flash,
+                  메타데이터+피처      RAM에 로드)         무료 티어)
+                  112K products
 ```
 
-- **Frontend**: Vercel (정적 호스팅, CDN)
-- **Backend**: Cloud Run (서버리스, min-instances=1로 cold start 방지)
-- **Database**: Cloud SQL PostgreSQL 16 + pgvector (`halfvec` + HNSW 인덱스)
-- **Model Storage**: GCS 버킷 → Cloud Run 볼륨 마운트
+- **Frontend**: Vercel (정적 호스팅, CDN) — `https://chatbeauty-mu.vercel.app`
+- **Backend**: Hugging Face Docker Space (무료 16GB RAM — ~2.1GB BGE-M3 적재 가능)
+- **Database**: Supabase PostgreSQL + pgvector (`halfvec`) — **메타데이터 + 리랭킹 피처만**
+- **벡터 검색**: 백엔드 **인메모리 FAISS HNSW 인덱스** (DB 내 인덱스는 Supabase 500MB 무료 한도 초과,
+  인덱스 없는 정확 검색은 ~40초/쿼리)
+- **모델 + 인덱스**: Hugging Face Hub, Space 시작 시 다운로드
+- **설명 생성**: Google AI Studio 무료 티어 Gemini 키
+
+전체 런북: [deploy/hf-space/DEPLOY.md](deploy/hf-space/DEPLOY.md).
 
 ---
 
@@ -241,17 +257,13 @@ python -m ml.pipeline.run \
 
 전체 로컬 셋업 절차는 [docs/development.md](docs/development.md)를 참고하세요.
 
-### Cloud Run 배포
+### 무료 배포 (Supabase + HF Space + Vercel)
 
-```bash
-# 이미지 빌드 (Cloud Build)
-gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/chatbeauty/backend --timeout=1800
+전 과정을 $0로 운영합니다: Supabase 적재 → 모델 + FAISS 인덱스를 HF Hub에 업로드 →
+백엔드를 Hugging Face Docker Space로 배포 → Vercel `VITE_API_URL`을 Space로 지정.
+단계별 런북: **[deploy/hf-space/DEPLOY.md](deploy/hf-space/DEPLOY.md)**.
 
-# 배포
-gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
-```
-
-자세한 배포 방법은 [deploy/setup-gcp.sh](deploy/setup-gcp.sh)를 참고하세요.
+> `deploy/setup-gcp.sh`는 폐기된 유료 GCP 스크립트로, 참고용으로만 남겨두었습니다.
 
 ---
 
@@ -265,18 +277,21 @@ gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![LightGBM](https://img.shields.io/badge/LightGBM-02569B?style=flat)
-![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat&logo=google-cloud&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-FFD21E?style=flat)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
 
 | 분류 | 기술 |
 |------|------|
 | **Frontend** | React, TypeScript, Vite, Vercel |
 | **Backend** | FastAPI, Uvicorn, Docker |
 | **Embedding** | BAAI/bge-m3 (fine-tuned), sentence-transformers |
-| **Database** | PostgreSQL 16 + pgvector (`halfvec` + HNSW) |
-| **LLM** | Llama 3.1:8B (키워드 추출), Gemini 2.5 Flash (추천 설명) |
+| **벡터 검색** | FAISS (인메모리 HNSW) |
+| **Database** | PostgreSQL 16 + pgvector (`halfvec`) — Supabase |
+| **LLM** | Llama 3.1:8B (키워드 추출), Gemini 2.5 Flash via `google-genai` (추천 설명) |
 | **Re-ranking** | LightGBM (LambdaRank) |
 | **Data Pipeline** | Apache Beam (DirectRunner) |
-| **Deployment** | Google Cloud Run, Cloud SQL, Cloud Storage, Vercel |
+| **Deployment** (무료 티어) | Hugging Face Space (백엔드), Supabase (DB), HF Hub (모델+인덱스), Vercel (프론트) |
 
 ---
 
@@ -300,7 +315,9 @@ gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
 │   ├── notebooks/               #   Colab 노트북 (임베딩)
 │   └── model/                   #   학습된 모델 (git 미포함)
 ├── frontend/                    # React 프론트엔드
-├── deploy/setup-gcp.sh          # Cloud Run 배포 스크립트
+├── deploy/
+│   ├── hf-space/                #   Hugging Face Space (Dockerfile, start.sh, DEPLOY.md)
+│   └── setup-gcp.sh             #   폐기된 유료 GCP 스크립트 (참고용)
 ├── docs/                        # 상세 문서 (architecture, api-spec, db-schema 등)
 ├── images/                      # README 이미지
 └── README.md
@@ -314,10 +331,10 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 ## 자체 평가
 
 ### 기술적 성과
-- **2-stage 추천 파이프라인 구현**: Bi-encoder 기반 Retrieval과 LightGBM Reranking 단계를 분리하여, 112K 아이템 환경에서 ~1.4초 이내 추천 응답
-- **PostgreSQL + pgvector 기반 벡터 검색**: 관계형 DB에서 메타데이터 필터링과 HNSW 인덱스 벡터 유사도 검색을 통합
-- **LLM 기반 설명 가능한 추천 제공**: Gemini 2.5 Flash로 5개 상품 설명을 단일 API 호출로 생성하여 지연시간 최소화
-- **서버리스 프로덕션 배포**: Cloud Run + Cloud SQL + GCS 볼륨 마운트 + Vercel로 확장 가능한 아키텍처 구현
+- **2-stage 추천 파이프라인 구현**: Bi-encoder 기반 Retrieval과 LightGBM Reranking 단계를 분리한 112K 아이템 추천
+- **인메모리 FAISS 벡터 검색**: 백엔드에서 ANN 검색(~5ms)을 수행하고 메타데이터·리랭킹 피처는 Postgres에서 제공 — DB 내 pgvector 인덱스가 무료 티어에 맞지 않아 채택
+- **LLM 기반 설명 가능한 추천 제공**: Gemini 2.5 Flash로 5개 상품 설명을 단일 API 호출로 생성 (thinking 비활성화로 지연 ~5배 단축)
+- **무료 티어 프로덕션 배포 ($0)**: Hugging Face Space + Supabase + HF Hub + Vercel
 - **Apache Beam 데이터 파이프라인**: 리뷰/메타데이터 파싱, 검증, 집계, 조인을 자동화하여 112K 상품을 DB에 적재
 
 ### 한계점
@@ -328,7 +345,7 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 ### 향후 발전 계획
 - **사용자 행동 데이터 기반 추천 고도화**: 클릭/선택 로그를 활용한 온라인 학습 및 추천 성능 개선
 - **멀티모달 확장**: 텍스트뿐만 아니라 사용자의 피부 사진을 분석하여 추천에 반영하는 멀티모달 추천 시스템으로 고도화
-- **Retrieval 최적화**: HNSW 인덱스 도입, 프로브 수 튜닝 등으로 검색 지연시간 개선
+- **Retrieval 최적화**: 벡터 검색은 인메모리 FAISS HNSW로 동작 중이며, 다음 과제는 ONNX/int8 쿼리 인코딩으로 ~1.6초 BGE-M3 인코딩을 단축하는 것 (`TODO.md` 참고)
 
 ---
 

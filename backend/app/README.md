@@ -14,7 +14,7 @@ app/
 ├── main.py                       # FastAPI 앱, CORS, LatencyMiddleware
 ├── api/routes/recommend.py       # POST /recommend 오케스트레이션
 ├── services/
-│   ├── retrieval.py              # pgvector 코사인 검색 → Top-100
+│   ├── retrieval.py              # 인메모리 FAISS 검색 → Top-100 (메타데이터는 Postgres)
 │   ├── reranking.py              # LightGBM 재정렬 → Top-5
 │   ├── explanation.py            # Gemini 2.5 Flash 설명 (5개 한 번에)
 │   └── retrieval_resources.py    # BGE-M3 모델 + DB 커넥션 풀 (싱글톤)
@@ -42,7 +42,8 @@ uvicorn app.main:app --reload --port 8000
 ## Service Layer
 
 1. **Retrieval** (`services/retrieval.py`) — Fine-tuned BGE-M3로 쿼리를 인코딩하고
-   PostgreSQL + pgvector에서 코사인 유사도 Top-100 후보를 검색.
+   **인메모리 FAISS HNSW 인덱스**로 코사인 Top-100 ANN 검색 후, 해당 후보들의 메타데이터를
+   Postgres에서 일괄 조회 (pgvector 인덱스가 무료 한도를 넘어 벡터 검색은 인메모리로 수행).
 2. **Reranking** (`services/reranking.py`) — 10개 피처에 대한 LightGBM LambdaRank로
    재정렬하여 Top-5 선정. 피처는 DB에서 단일 배치 쿼리로 조회.
 3. **Explanation** (`services/explanation.py`) — Gemini 2.5 Flash가 5개 상품 설명을
@@ -55,5 +56,5 @@ CORS는 `ALLOWED_ORIGINS`(쉼표 구분, 기본 `http://localhost:5173`)로 설�
 
 ## Dependencies
 
-`backend/pyproject.toml` 참조 — fastapi, uvicorn, lightgbm, sentence-transformers,
-psycopg2-binary, pgvector, google-generativeai 등.
+`backend/pyproject.toml` 참조 — fastapi, uvicorn, lightgbm, faiss-cpu, sentence-transformers,
+psycopg2-binary, pgvector, google-genai 등.

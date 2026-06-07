@@ -53,15 +53,17 @@ backend/
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
 │  │  Retrieval  │→ │  Reranking  │→ │   Explanation   │ │
 │  │  (Top-100)  │  │   (Top-5)   │  │ (Gemini batch)  │ │
-│  │  ~1,100ms   │  │   ~19ms     │  │   ~250ms        │ │
+│  │  ~1,600ms   │  │   ~850ms    │  │   ~2,400ms      │ │
 │  └─────────────┘  └─────────────┘  └─────────────────┘ │
 └─────────────────────────────────────────────────────────┘
        │                    │                    │
        ▼                    ▼                    ▼
-  Cloud SQL           GCS Volume          Gemini 2.5 Flash
-  + pgvector         (BGE-M3, LightGBM)      API
-  112K products
+ in-memory FAISS      HF Hub (models +    Gemini 2.5 Flash
+ → metadata from     FAISS index, in RAM)   API (free tier)
+ Supabase (112K)
 ```
+(Latencies on the free-tier HF Space CPU. Retrieval = BGE-M3 encode + in-memory FAISS ANN;
+Supabase serves only metadata + reranking features.)
 
 ## Setup & Deployment
 
@@ -95,49 +97,29 @@ python -m ml.pipeline.run \
 
 ### 3. 임베딩 계산
 
-로컬 (CPU, ~4시간):
-```bash
-python -m ml.scripts.embed_products \
-  --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty
-```
+Colab T4 GPU 권장 (~15-30분): `ml/notebooks/embed_products_supabase.ipynb` 사용
+(HF Hub에서 BGE-M3를 받아 Supabase에 `halfvec`로 기록).
 
-또는 Colab T4 GPU (~15분):
-`notebooks/embed_products_colab.ipynb` 사용
+### 4. 벡터 인덱스 (인메모리 FAISS)
 
-### 4. 검색 인덱스 생성
+**DB에 벡터 인덱스를 만들지 않습니다.** `halfvec` 컬럼(~230MB) + pgvector 인덱스(~230MB)는
+Supabase 무료 500MB 한도를 초과하고, 인덱스 없는 정확 검색은 ~40초/쿼리입니다. 대신
+임베딩으로 **FAISS HNSW 인덱스를 오프라인 빌드해 HF Hub에 업로드**하고, 백엔드가 시작 시
+RAM에 로드해 ANN 검색(~5ms)을 수행합니다. Postgres는 메타데이터 + 리랭킹 피처만 제공합니다.
 
-```sql
-CREATE INDEX idx_products_embedding ON products
-USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-```
+### 5. 무료 배포 (Supabase + HF Space + Vercel)
 
-### 5. Cloud Run 배포
-
-```bash
-# Cloud Build로 이미지 빌드 (로컬 디스크 불필요)
-gcloud builds submit \
-  --tag REGION-docker.pkg.dev/PROJECT_ID/chatbeauty/backend \
-  --timeout=1800
-
-# Cloud Run 배포
-gcloud run deploy chatbeauty-backend \
-  --image=IMAGE_URL \
-  --region=REGION \
-  --add-cloudsql-instances=PROJECT_ID:REGION:chatbeauty-db \
-  --add-volume=name=models,type=cloud-storage,bucket=chatbeauty-models \
-  --add-volume-mount=volume=models,mount-path=/app/ml/model-gcs
-```
-
-전체 배포 스크립트: [deploy/setup-gcp.sh](../deploy/setup-gcp.sh)
+전체 런북: [deploy/hf-space/DEPLOY.md](../deploy/hf-space/DEPLOY.md). 요약: 모델+FAISS 인덱스를
+HF Hub에 업로드 → 백엔드를 Hugging Face Docker Space로 배포 → Vercel `VITE_API_URL`을 Space로 지정.
+(과거 GCP 스크립트 [deploy/setup-gcp.sh](../deploy/setup-gcp.sh)는 폐기됨, 참고용.)
 
 ### 6. 확인
 
 ```bash
-# 헬스 체크
-curl https://your-service-url/health
-
-# API 문서
-open https://your-service-url/docs
+curl https://<user>-<space>.hf.space/health   # {"status":"ok"}
+curl -X POST https://<user>-<space>.hf.space/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"user_input":"gentle moisturizer for dry sensitive skin"}'
 ```
 
 ## Environment Variables
@@ -146,19 +128,21 @@ open https://your-service-url/docs
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API 키 |
 | `DATABASE_URL` | PostgreSQL 연결 URL |
-| `BGE_MODEL_PATH` | BGE-M3 모델 경로 (기본: GCS 마운트 경로) |
-| `RERANK_MODEL_PATH` | LightGBM 모델 경로 (기본: GCS 마운트 경로) |
+| `BGE_MODEL_PATH` | BGE-M3 모델 경로 (로컬 `ml/model/` 마운트, HF Space는 Hub에서 다운로드) |
+| `RERANK_MODEL_PATH` | LightGBM 모델 경로 (로컬 마운트 / HF Hub) |
+| `ANN_INDEX_PATH` / `ANN_ASINS_PATH` | 인메모리 FAISS 인덱스 + asin 매핑 경로 (HF Space `start.sh`가 설정) |
 | `ALLOWED_ORIGINS` | CORS 허용 도메인 (Vercel URL) |
 
 ## Tech Stack
 
 - **API Framework**: FastAPI, Uvicorn
 - **Embedding Model**: BAAI/bge-m3 (fine-tuned), sentence-transformers
-- **Database**: PostgreSQL 16 + pgvector (IVFFlat index)
-- **Explanation LLM**: Google Gemini 2.5 Flash
+- **Vector search**: FAISS (in-memory HNSW)
+- **Database**: PostgreSQL 16 + pgvector (`halfvec`) — Supabase (metadata + features)
+- **Explanation LLM**: Google Gemini 2.5 Flash (`google-genai`, thinking off)
 - **Reranker**: LightGBM (LambdaRank, NDCG@5=0.3655)
 - **Data Pipeline**: Apache Beam (DirectRunner)
-- **Deployment**: Docker, Google Cloud Run, Cloud SQL, Cloud Storage
+- **Deployment** (free-tier): Docker on Hugging Face Space, Supabase, HF Hub, Vercel
 
 ## Dataset
 

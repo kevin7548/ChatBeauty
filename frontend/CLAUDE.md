@@ -19,7 +19,7 @@ src/
 
 ## API client
 - `API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000"`.
-- `warmUp()` GETs `/health` on mount to hide Cloud Run cold-start latency.
+- `warmUp()` GETs `/health` on mount to hide free-host (HF Space) cold-start latency.
 - The payload sends `top_k: 5` but the **backend ignores `top_k`** (always Top-5).
 
 ## Run

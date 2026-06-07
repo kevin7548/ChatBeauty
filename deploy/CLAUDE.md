@@ -1,21 +1,27 @@
 # deploy/
 
-Infra/deployment for the backend. One file: `setup-gcp.sh` (run from your local machine).
+Free-tier deployment for the backend.
 
-## What `setup-gcp.sh` does
-1. Enables GCP APIs (Run, SQL Admin, Artifact Registry, Cloud Build, Storage).
-2. Creates the Artifact Registry repo (`asia-northeast3`).
-3. Builds the image via **Cloud Build** (`gcloud builds submit`, no local Docker).
-4. `gcloud run deploy chatbeauty-backend`: 4Gi/2CPU, min/max instances 1/2, timeout 300s,
-   `--allow-unauthenticated`, Cloud SQL socket, gen2, and a **GCS volume** (`chatbeauty-models`)
-   mounted at `/app/ml/model-gcs` for the BGE-M3 + LightGBM models.
+- **`hf-space/`** — the **live** deployment: a Hugging Face Docker Space (`Dockerfile`, `start.sh`,
+  `README.md` Space card) + **`DEPLOY.md`** (the end-to-end runbook).
+- **`setup-gcp.sh`** — the **retired** paid-GCP script (Cloud Run / Cloud SQL / GCS), kept for
+  historical reference only. Paid GCP was torn down 2026-06-02 — do **not** run it without an
+  explicit decision to spend money.
 
-Secrets (`DATABASE_URL`, `GEMINI_API_KEY`) are passed via `--set-env-vars`; `GEMINI_API_KEY`
-must be exported in your shell first. Edit `PROJECT_ID` / `DB_PASSWORD` before running.
+## Live stack (free, $0)
+Vercel (frontend) → **Hugging Face Docker Space** (FastAPI) → **Supabase** (Postgres) + Gemini.
+- **Backend:** Space `kevin7548/chatbeauty-backend`. The `Dockerfile` clones GitHub `main`;
+  `start.sh` downloads the models + FAISS index from the HF Hub and serves on `:7860`.
+- **DB:** Supabase — **metadata + reranking features only**. There is **no pgvector index**
+  (it wouldn't fit the 500 MB free cap); serve-time vector search is an **in-memory FAISS** index.
+- **Models + FAISS index:** HF Hub `kevin7548/chatbeauty-models`.
+- **Space secrets/vars:** `DATABASE_URL`, `GEMINI_API_KEY` (secrets); `MODEL_REPO_ID`,
+  `ALLOWED_ORIGINS` (vars). `ANN_INDEX_PATH`/`ANN_ASINS_PATH` are set by `start.sh`.
+- **Redeploy:** bump `CACHEBUST` in the Space's `Dockerfile` and re-upload → forces a fresh
+  `git clone` of `main`.
 
-## Scope note
-This script + `backend/Dockerfile` + `backend/docker-compose.yml` are the deploy surface.
-Frontend deploys to Vercel (no config file; set `VITE_API_URL`).
+## Scope
+`deploy/` + `backend/Dockerfile` + `backend/docker-compose.yml`. Frontend → Vercel (set `VITE_API_URL`).
 
 ## Docs
-Topology, Cloud Run flags, env-var table, secrets, observability → `docs/deployment.md`
+Full runbook → `deploy/hf-space/DEPLOY.md` · topology / env-vars → `docs/deployment.md`

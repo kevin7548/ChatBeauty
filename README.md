@@ -15,6 +15,8 @@ Built to solve these common dilemmas.
 
 ## Demo
 
+**Live:** https://chatbeauty-mu.vercel.app (free-tier stack — first request after idle may cold-start)
+
 ![ChatBeauty Demo](images/demo_video.gif)
 
 [Demo Video (YouTube)](https://youtu.be/g0UO8cHWX9I)
@@ -48,7 +50,7 @@ Rather than simply recommending popular products, the core goal is to explain:
 
 The pipeline consists of 3 stages from user scenario input to recommendation results.
 
-1. **Retrieval**: Encode user scenario with fine-tuned BGE-M3, extract Top-100 candidates from PostgreSQL + pgvector via HNSW index cosine similarity
+1. **Retrieval**: Encode user scenario with fine-tuned BGE-M3, extract Top-100 candidates via an **in-memory FAISS HNSW index** (cosine similarity), then fetch their metadata from PostgreSQL
 2. **Re-ranking**: Use LightGBM (LambdaRank) with 10 metadata features (price, rating, review count, etc.) to select Top-5
 3. **Explanation**: Gemini 2.5 Flash generates personalized recommendation reasons for all 5 products in a single API call based on the user's scenario and actual review data
 
@@ -187,33 +189,48 @@ For the final Top-5 products, **Gemini 2.5 Flash** generates personalized recomm
 
 ## Production Latency
 
+Measured on the free-tier Hugging Face Space (shared CPU):
+
 | Stage | Time |
 |-------|------|
-| Retrieval (pgvector HNSW) | ~1,100ms |
-| Reranking (LightGBM) | ~19ms |
-| Explanation (Gemini 2.5 Flash) | ~250ms |
-| **Total** | **~1,400ms** |
+| Retrieval (BGE-M3 encode + in-memory FAISS) | ~1,600ms |
+| Reranking (LightGBM) | ~850ms |
+| Explanation (Gemini 2.5 Flash, thinking off) | ~2,400ms |
+| **Total** | **~4,800ms** |
+
+> The earlier ~1.4s figure was on paid Cloud Run (now retired). On free shared CPU the BGE-M3
+> query encoding and the Gemini call dominate; both are tracked as optimizations in `TODO.md`
+> (ONNX query encoder, etc.).
 
 ---
 
-## Deployment Architecture
+## Deployment Architecture (free-tier, $0)
+
+> The paid Google Cloud deployment (Cloud Run / Cloud SQL / GCS) was retired on 2026-06-02 to
+> avoid cost. ChatBeauty now runs entirely on free tiers.
 
 ```
-Vercel (Frontend)                    Google Cloud
-──────────────────                  ─────────────
-React + TypeScript   ──API call──→  Cloud Run (FastAPI)
-                                        │
-                           ┌────────────┼────────────┐
-                           ▼            ▼            ▼
-                      Cloud SQL    GCS Volume    Gemini API
-                     (pgvector)   (BGE-M3 model)  (2.5 Flash)
-                     112K products  LightGBM pkl
+Vercel (Frontend)                 Hugging Face Space (Docker, FastAPI)
+──────────────────               ─────────────────────────────────────
+React + TypeScript  ──API call──▶ in-memory FAISS ─▶ Top-100 asins
+                                        │                  │
+                          ┌─────────────┼──────────────────┤
+                          ▼             ▼                  ▼
+                     Supabase      HF Hub (models +    Gemini API
+                  Postgres+pgvector  FAISS index,       (2.5 Flash,
+                  metadata+features   loaded into RAM)   free tier)
+                  112K products
 ```
 
-- **Frontend**: Vercel (static hosting, CDN)
-- **Backend**: Cloud Run (serverless, min-instances=1 to prevent cold starts)
-- **Database**: Cloud SQL PostgreSQL 16 + pgvector (`halfvec` + HNSW index)
-- **Model Storage**: GCS bucket → Cloud Run volume mount
+- **Frontend**: Vercel (static hosting, CDN) — `https://chatbeauty-mu.vercel.app`
+- **Backend**: Hugging Face Docker Space (16 GB RAM free) — fits the ~2.1 GB BGE-M3
+- **Database**: Supabase PostgreSQL + pgvector (`halfvec`) — **metadata + reranking features only**
+- **Vector search**: an **in-memory FAISS HNSW index** loaded on the Space (an in-DB index would
+  exceed Supabase's 500 MB free cap; exact scan was ~40 s/query)
+- **Models + index**: Hugging Face Hub, downloaded at Space startup
+- **Explanations**: Google AI Studio (free-tier Gemini key)
+
+Full runbook: [deploy/hf-space/DEPLOY.md](deploy/hf-space/DEPLOY.md).
 
 ---
 
@@ -237,17 +254,13 @@ python -m ml.pipeline.run \
 
 See [docs/development.md](docs/development.md) for the full end-to-end local setup.
 
-### Cloud Run Deployment
+### Free-tier Deployment (Supabase + HF Space + Vercel)
 
-```bash
-# Build image (Cloud Build — no local disk needed)
-gcloud builds submit --tag REGION-docker.pkg.dev/PROJECT_ID/chatbeauty/backend --timeout=1800
+The whole stack runs at $0: load Supabase, push the models + FAISS index to the HF Hub, deploy the
+backend as a Hugging Face Docker Space, and point Vercel at it. Step-by-step runbook:
+**[deploy/hf-space/DEPLOY.md](deploy/hf-space/DEPLOY.md)**.
 
-# Deploy
-gcloud run deploy chatbeauty-backend --image=IMAGE_URL --region=REGION ...
-```
-
-See [deploy/setup-gcp.sh](deploy/setup-gcp.sh) for the full deployment script.
+> `deploy/setup-gcp.sh` is the retired paid-GCP script, kept only for historical reference.
 
 ---
 
@@ -261,18 +274,21 @@ See [deploy/setup-gcp.sh](deploy/setup-gcp.sh) for the full deployment script.
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![LightGBM](https://img.shields.io/badge/LightGBM-02569B?style=flat)
-![Google Cloud](https://img.shields.io/badge/Google_Cloud-4285F4?style=flat&logo=google-cloud&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-FFD21E?style=flat)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
 
 | Category | Technologies |
 |----------|-------------|
 | **Frontend** | React, TypeScript, Vite, Vercel |
 | **Backend** | FastAPI, Uvicorn, Docker |
 | **Embedding** | BAAI/bge-m3 (fine-tuned), sentence-transformers |
-| **Database** | PostgreSQL 16 + pgvector (`halfvec` + HNSW) |
-| **LLM** | Llama 3.1:8B (keyword extraction), Gemini 2.5 Flash (explanations) |
+| **Vector search** | FAISS (in-memory HNSW) |
+| **Database** | PostgreSQL 16 + pgvector (`halfvec`) — Supabase |
+| **LLM** | Llama 3.1:8B (keyword extraction), Gemini 2.5 Flash via `google-genai` (explanations) |
 | **Re-ranking** | LightGBM (LambdaRank) |
 | **Data Pipeline** | Apache Beam (DirectRunner) |
-| **Deployment** | Google Cloud Run, Cloud SQL, Cloud Storage, Vercel |
+| **Deployment** (free-tier) | Hugging Face Space (backend), Supabase (DB), HF Hub (models+index), Vercel (frontend) |
 
 ---
 
@@ -296,7 +312,9 @@ See [deploy/setup-gcp.sh](deploy/setup-gcp.sh) for the full deployment script.
 │   ├── notebooks/               #   Colab notebooks (embedding)
 │   └── model/                   #   trained models (not in git)
 ├── frontend/                    # React frontend
-├── deploy/setup-gcp.sh          # Cloud Run deployment script
+├── deploy/
+│   ├── hf-space/                #   Hugging Face Space (Dockerfile, start.sh, DEPLOY.md)
+│   └── setup-gcp.sh             #   retired paid-GCP script (historical)
 ├── docs/                        # Detailed docs (architecture, api-spec, db-schema, ...)
 ├── images/                      # README images
 └── README.md
@@ -310,10 +328,10 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 ## Evaluation
 
 ### Technical Achievements
-- **2-stage recommendation pipeline**: Bi-encoder retrieval + LightGBM reranking delivering recommendations within ~1.4s across 112K items
-- **PostgreSQL + pgvector vector search**: Integrated metadata filtering and HNSW index vector similarity in a relational DB
-- **LLM-based explainable recommendations**: Gemini 2.5 Flash generates all 5 product explanations in a single API call for minimal latency
-- **Serverless production deployment**: Cloud Run + Cloud SQL + GCS volume mounts + Vercel for a scalable architecture
+- **2-stage recommendation pipeline**: Bi-encoder retrieval + LightGBM reranking across 112K items
+- **In-memory FAISS vector search**: ANN retrieval (~5 ms) on the backend, with metadata + reranking features served from Postgres — chosen because an in-DB pgvector index doesn't fit the free tier
+- **LLM-based explainable recommendations**: Gemini 2.5 Flash generates all 5 product explanations in a single API call (thinking disabled for ~5× lower latency)
+- **Free-tier production deployment ($0)**: Hugging Face Space + Supabase + HF Hub + Vercel
 - **Apache Beam data pipeline**: Automated parsing, validation, aggregation, and joining of 112K products into the database
 
 ### Limitations
@@ -324,7 +342,7 @@ db-schema, frontend-architecture, ml-pipeline, deployment, development).
 ### Future Plans
 - **User behavior data-driven improvement**: Online learning and recommendation refinement using click/selection logs
 - **Multimodal extension**: Evolve into a multimodal recommendation system that analyzes user skin photos in addition to text
-- **Retrieval optimization**: HNSW index over a `halfvec` column is in place; further tune `ef_search` / explore quantization to reduce search latency
+- **Retrieval optimization**: vector search runs as an in-memory FAISS HNSW index; the next lever is ONNX/int8 query encoding to cut the ~1.6 s BGE-M3 encode (see `TODO.md`)
 
 ---
 
