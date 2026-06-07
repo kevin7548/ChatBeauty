@@ -14,15 +14,17 @@ ml/
 ├── pipeline/        # Beam DAG — see ml/pipeline/CLAUDE.md
 ├── item_ranker/     # LightGBM lib (imported by backend!) — see ml/item_ranker/CLAUDE.md
 ├── scripts/         # embed_products.py (BGE-M3 → DB)
-├── notebooks/       # Colab (GPU embedding/training)
-└── model/           # trained artifacts (not in git; deployed via GCS)
+├── notebooks/       # Colab (GPU embedding/training; embed_products_supabase.ipynb)
+└── model/           # trained artifacts (not in git; kept locally + on the HF Hub)
 ```
 
 ## Constraints
 - `item_ranker/` is installed (`pip install -e ml/`) and **imported by `backend/app/` at
   serve time** — keep its public API stable.
-- Embedding dimension must stay **1024** (matches the `vector(1024)` pgvector column).
-- Model artifacts go to **GCS**, not into the Docker image.
+- Embedding dimension must stay **1024** (matches the `halfvec(1024)` column + the FAISS index).
+- Model artifacts live in local `ml/model/` and on the **HF Hub**, not in the Docker image.
+- Serve-time vector search is an **in-memory FAISS** index built from the embeddings (the DB has
+  no pgvector index — it wouldn't fit the Supabase free cap).
 
 ## Docs
 Beam DAG, fine-tuning, LightGBM feature table, versioning → `docs/ml-pipeline.md`

@@ -13,7 +13,9 @@ Apache Beam data pipeline (DirectRunner, offline). Entry point: `run.py`.
   keywords+items → CreateTrainingPairs → WriteJsonl(training_pairs)
 ```
 Order: **Parse → Validate → Aggregate → Join → Sink**. Two sinks: the `products` table and
-`training_pairs.jsonl` (~1M BGE-M3 fine-tuning pairs).
+`training_pairs.jsonl` (~1M BGE-M3 fine-tuning pairs). Pass **`--skip-training-pairs`** for a
+memory-light **products-only** DB load (the pairs branch materializes ~1M pairs and OOMs ~16 GB);
+used to load Supabase for the free-tier deploy.
 
 ## Files
 `run.py` (wiring), `options.py` (`ChatBeautyPipelineOptions` CLI args), `schemas.py`

@@ -16,9 +16,13 @@ A single denormalized `products` table (PK `parent_asin`) holds everything servi
   store). It does **not** create the vector index.
 - `embedding` is `halfvec(1024)` (2 bytes/dim, ~50% RAM vs. `vector`, for the Supabase free
   tier); requires pgvector ≥ 0.7.
-- Build the HNSW index **after** embeddings are loaded:
-  `CREATE INDEX ... USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);`
-- **No migration tool** (no Alembic) — change `init.sql` and re-apply. No triggers, no RLS.
+- **No in-DB vector index.** The `halfvec` column (~230 MB) + a pgvector index (~230 MB) exceed
+  Supabase's 500 MB free cap, and exact scan is ~40 s/query. Serve-time vector search runs as an
+  **in-memory FAISS HNSW index** on the backend (built offline from the embeddings; the `embedding`
+  column exists only to build it). The commented HNSW recipe in `init.sql` is for non-free hosting.
+- **No migration tool** (no Alembic) — change `init.sql` and re-apply. No triggers. On Supabase,
+  **RLS is enabled with no policies** (the app connects as the owner role and bypasses RLS, so the
+  public PostgREST API is closed while the backend is unaffected).
 
 ## Docs
 Full column/index reference + load workflow → `docs/db-schema.md`

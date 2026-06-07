@@ -1,10 +1,11 @@
 # ChatBeauty — Project TODO
 
-Single source of truth for remaining work. The frontend runs on Vercel (free) and the models are
-trained (saved locally in `ml/model/`). **The paid GCP backend infra — Cloud Run, Cloud SQL,
-Artifact Registry, GCS — was torn down on 2026-06-02 to avoid cost.** The project now targets a
-**free-tier stack only**: Supabase Postgres, a local or free-host backend, Vercel frontend, and a
-Google AI Studio (free-tier) Gemini key. See [`docs/deployment.md`](docs/deployment.md).
+Single source of truth for remaining work. **Live on the free-tier stack (2026-06-07):**
+https://chatbeauty-mu.vercel.app — Vercel → Hugging Face Space → Supabase + Gemini, all at $0.
+Vector search runs as an **in-memory FAISS** index on the backend (a pgvector index won't fit the
+Supabase free cap). The paid GCP infra (Cloud Run / Cloud SQL / Artifact Registry / GCS) was torn
+down 2026-06-02. Deploy runbook: [`deploy/hf-space/DEPLOY.md`](deploy/hf-space/DEPLOY.md) ·
+overview: [`docs/deployment.md`](docs/deployment.md).
 
 The **Current focus** below is the active roadmap, ordered as an execution queue and tagged per
 agent/window so it doubles as a dispatch board; the **Backlog** holds documented limitations and
@@ -48,21 +49,14 @@ domain agents in `.claude/agents/`.
 
 ### Active queue
 
-- [ ] **Step 0 — `→ deploy window` — [deploy][db] Re-platform on the free-tier stack.**
-      Replaces the retired paid GCP infra (torn down 2026-06-02). Bring the app back at $0:
-      **DB** → Supabase free tier (Postgres + pgvector + `halfvec`, 500MB); apply
-      [`backend/sql/init.sql`](backend/sql/init.sql), re-load via the Beam pipeline +
-      [`ml/scripts/embed_products.py`](ml/scripts/embed_products.py), build the HNSW index.
-      **Backend** → run locally via [`backend/docker-compose.yml`](backend/docker-compose.yml)
-      (primary, simplest $0) or, for an always-online free demo, a **Hugging Face Docker Space**
-      (16 GB RAM free — the only free tier big enough for the ~2.1 GB BGE-M3; Render 512 MB /
-      Fly 256 MB will OOM). Models load from local `ml/model/` locally, or BGE-M3 from the **HF
-      Hub** + the LightGBM `.pkl` committed (256 KB) on a Space. **Gemini** → Google AI Studio
-      free-tier key. **Frontend** → Vercel (already free).
-      Update env (`DATABASE_URL` → Supabase pooler URL, `BGE_MODEL_PATH` / `RERANK_MODEL_PATH` →
-      local paths). **Space files + full runbook ready:** [`deploy/hf-space/`](deploy/hf-space/)
-      and [`deploy/hf-space/DEPLOY.md`](deploy/hf-space/DEPLOY.md). Details:
-      [`docs/deployment.md`](docs/deployment.md).
+- [x] **Step 0 — `→ deploy window` — [deploy][db] Re-platform on the free-tier stack.** ✅ Done (2026-06-07)
+      Live at https://chatbeauty-mu.vercel.app. **DB** → Supabase (112,578 products + reranking
+      features; **no in-DB vector index**). **Vector search** → in-memory **FAISS HNSW** loaded on
+      the Space (a pgvector index won't fit the 500 MB cap; exact scan was ~40 s/query). **Backend**
+      → HF Docker Space `kevin7548/chatbeauty-backend`. **Models + FAISS index** → HF Hub
+      `kevin7548/chatbeauty-models`. **Gemini** → AI Studio free key via `google-genai` (thinking
+      off). **Frontend** → Vercel. `/recommend` ≈ 4.8 s. Runbook:
+      [`deploy/hf-space/DEPLOY.md`](deploy/hf-space/DEPLOY.md). (PRs #4–#8.)
 
 - [x] **Step 1 — `→ backend window` — [backend][test] pytest integration test for `POST /recommend`.** ✅ Done
       Landed in `backend/tests/` (`test_recommend.py`, `conftest.py`); exercises the full

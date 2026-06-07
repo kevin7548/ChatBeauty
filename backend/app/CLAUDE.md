@@ -3,11 +3,14 @@
 FastAPI application. Orchestrates a 3-stage recommendation pipeline.
 
 ## Pipeline (per request, `api/routes/recommend.py`)
-1. **Retrieval** (`services/retrieval.py`, ~1,100ms) — encode the query with BGE-M3 (1024-dim),
-   pgvector cosine search → Top-100 candidates.
-2. **Reranking** (`services/reranking.py`, ~19ms) — LightGBM over 10 features (1 batched DB
+1. **Retrieval** (`services/retrieval.py`, ~1,600ms) — encode the query with BGE-M3 (1024-dim),
+   search an **in-memory FAISS HNSW index** → Top-100 `parent_asin`, then fetch their metadata
+   from Postgres (`WHERE parent_asin = ANY(...)`). No pgvector index — it wouldn't fit the free cap.
+2. **Reranking** (`services/reranking.py`, ~850ms) — LightGBM over 10 features (1 batched DB
    feature lookup) → Top-5. `top_k` is **hardcoded to 5** in the route.
-3. **Explanation** (`services/explanation.py`, ~250ms) — Gemini 2.5 Flash, **all 5 in one call**.
+3. **Explanation** (`services/explanation.py`, ~2,400ms) — Gemini 2.5 Flash via `google-genai`,
+   thinking disabled, **all 5 in one call**.
+(Latencies on the free-tier HF Space CPU.)
 
 ## Layout
 ```
