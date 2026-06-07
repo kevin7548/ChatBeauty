@@ -11,10 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libgomp1 git \
     && rm -rf /var/lib/apt/lists/*
 
-# Application code from GitHub. Bump REPO_REF (or rebuild the Space) to deploy a new version.
+# Application code from GitHub. To deploy a fresh main, bump CACHEBUST in the Space's
+# Dockerfile and re-upload — that busts this layer's cache so the clone re-runs.
 ARG REPO_URL=https://github.com/kevin7548/ChatBeauty
 ARG REPO_REF=main
-RUN git clone --depth 1 --branch ${REPO_REF} ${REPO_URL} src
+ARG CACHEBUST=1
+RUN echo "cachebust=${CACHEBUST}" && git clone --depth 1 --branch ${REPO_REF} ${REPO_URL} src
 
 # Backend deps (mirrors backend/Dockerfile) + the local item_ranker package + hub tooling.
 RUN pip install --no-cache-dir poetry huggingface_hub hf_transfer && \

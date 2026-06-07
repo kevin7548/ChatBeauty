@@ -2,7 +2,8 @@ import os
 import json
 import logging
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("환경 변수 GEMINI_API_KEY 가 설정되지 않았습니다.")
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 SYSTEM_PROMPT = """
 너는 쇼핑 추천 전문가야. 리랭킹된 상품 리스트와 사용자의 검색어를 분석하여, 사용자에게 이 상품이 왜 추천되었는지 '데이터에 기반해' 설명하는 역할을 수행한다.
@@ -42,33 +43,37 @@ SYSTEM_PROMPT = """
 }
 """
 
-_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+# Thinking is disabled (thinking_budget=0): this is a faithful, templated grounding
+# task, so reasoning adds no quality but ~4-5x latency (measured: ~12s -> ~2-3s) and
+# can truncate the answer by eating the output budget. Low temperature keeps the
+# explanations consistent and grounded in the provided data.
+_CONFIG = types.GenerateContentConfig(
     system_instruction=SYSTEM_PROMPT,
-    generation_config=genai.GenerationConfig(
-        temperature=0.2,
-        top_p=0.8,
-        max_output_tokens=8192,
-        response_mime_type="application/json",
-    ),
+    temperature=0.2,
+    top_p=0.8,
+    max_output_tokens=1024,
+    response_mime_type="application/json",
+    thinking_config=types.ThinkingConfig(thinking_budget=0),
 )
+_MODEL = "gemini-2.5-flash"
 
 
 def generate_explanation(explanation_input: dict) -> dict:
     """
-    Generate explanations for recommended items using Gemini 2.0 Flash.
-    Signature and return format identical to the previous HyperCLOVA X version.
+    Generate explanations for recommended items using Gemini 2.5 Flash.
+    Signature and return format identical to the previous version.
     """
     user_message = json.dumps(explanation_input, ensure_ascii=False)
 
     try:
-        response = _model.generate_content(user_message)
+        response = client.models.generate_content(
+            model=_MODEL, contents=user_message, config=_CONFIG
+        )
         raw_text = response.text
 
         try:
-            parsed = json.loads(raw_text)
-            return parsed
-        except json.JSONDecodeError as e:
+            return json.loads(raw_text)
+        except (json.JSONDecodeError, TypeError) as e:
             finish_reason = None
             output_tokens = None
             try:
@@ -81,9 +86,9 @@ def generate_explanation(explanation_input: dict) -> dict:
                 pass
             logger.warning(
                 f"JSON parse failed: {e} | finish_reason={finish_reason} "
-                f"| output_tokens={output_tokens} | raw[:200]={raw_text[:200]}"
+                f"| output_tokens={output_tokens} | raw[:200]={(raw_text or '')[:200]}"
             )
-            return {"explanations": [{"item_id": "all", "explanation": raw_text}]}
+            return {"explanations": [{"item_id": "all", "explanation": raw_text or ""}]}
 
     except Exception as e:
         logger.error(f"Gemini API error: {e}")
