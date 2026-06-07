@@ -6,8 +6,10 @@ connection pool for pgvector similarity search.
 """
 
 import os
+import json
 import logging
 
+import faiss
 import psycopg2
 from psycopg2 import pool
 from sentence_transformers import SentenceTransformer
@@ -22,6 +24,18 @@ MODEL_PATH = os.environ.get(
     str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "bge-m3-finetuned-20260202-120852"),
 )
 
+# In-memory ANN index (FAISS HNSW) — vector search runs in-process instead of in
+# Postgres, because the embeddings + index don't fit the Supabase free-tier cap.
+ANN_INDEX_PATH = os.environ.get(
+    "ANN_INDEX_PATH",
+    str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "ann" / "faiss_hnsw_cosine.index"),
+)
+ANN_ASINS_PATH = os.environ.get(
+    "ANN_ASINS_PATH",
+    str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "ann" / "asins.json"),
+)
+ANN_EF_SEARCH = int(os.environ.get("ANN_EF_SEARCH", "100"))
+
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty",
@@ -29,6 +43,15 @@ DATABASE_URL = os.environ.get(
 
 # Load embedding model once at startup
 model = SentenceTransformer(MODEL_PATH)
+
+# Load the ANN index + the parent_asin lookup (row index -> parent_asin) once.
+ann_index = faiss.read_index(ANN_INDEX_PATH)
+ann_index.hnsw.efSearch = ANN_EF_SEARCH
+with open(ANN_ASINS_PATH) as _f:
+    ann_asins = json.load(_f)
+logger.info(
+    "Loaded ANN index: %d vectors, ef_search=%d", ann_index.ntotal, ANN_EF_SEARCH
+)
 
 # PostgreSQL connection pool (min 1, max 5 connections)
 # TCP keepalives help detect dead sockets faster when Cloud Run pauses
