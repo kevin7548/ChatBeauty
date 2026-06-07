@@ -21,6 +21,9 @@ PY
 
 export BGE_MODEL_PATH="${MODEL_DIR}/retrieval/bge-m3-finetuned-20260202-120852"
 export RERANK_MODEL_PATH="${MODEL_DIR}/reranking/lgbm_reranker_current_features_v1.pkl"
+# In-memory FAISS ANN index (vector search runs in-process; see retrieval.py).
+export ANN_INDEX_PATH="${MODEL_DIR}/retrieval/ann/faiss_hnsw_cosine.index"
+export ANN_ASINS_PATH="${MODEL_DIR}/retrieval/ann/asins.json"
 
 cd /app/src/backend
 exec uvicorn app.main:app --host 0.0.0.0 --port 7860 --workers 1
