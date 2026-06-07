@@ -28,20 +28,30 @@ Vercel (React SPA, free) ──API──▶ FastAPI backend
 
 ## Database — Supabase (free tier)
 
-Supabase gives a free Postgres with `pgvector` (≥ 0.7, so `halfvec` + HNSW work). Migration:
+Supabase gives a free Postgres with `pgvector` (≥ 0.7, so `halfvec` works). Migration:
 
-1. Create a free Supabase project; grab the **connection pooler** URL.
+1. Create a free Supabase project; grab the **transaction connection-pooler** URL (port 6543;
+   URL-encode special chars in the password).
 2. Enable the extension and apply the schema:
    `create extension if not exists vector;` then run [`../backend/sql/init.sql`](../backend/sql/init.sql).
-3. Load data + embeddings with the offline pipeline pointed at the Supabase URL
-   (Beam load → `embed_products.py`); see [development.md](development.md) steps 2–3.
-4. Build the HNSW index **after** embeddings exist:
-   `CREATE INDEX idx_products_embedding ON products USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);`
+3. Load products (`python -m ml.pipeline.run … --skip-training-pairs`) then embeddings on Colab
+   GPU ([`../ml/notebooks/embed_products_supabase.ipynb`](../ml/notebooks/embed_products_supabase.ipynb)).
 
-**Free-tier budget (500MB):** the `halfvec(1024)` column + HNSW index are the largest objects;
-this is exactly why the embedding was migrated to `halfvec` (see [db-schema.md](db-schema.md)).
-Check headroom with `pg_database_size` before adding the hybrid-retrieval GIN index
-([`../TODO.md`](../TODO.md) Step 3).
+> **No in-DB vector index.** The `halfvec(1024)` column alone is ~230 MB, and a pgvector index
+> would add ~230 MB more — over the **500 MB free cap** (and index-free exact scan is ~40 s/query).
+> So vector search runs **in-memory on the backend** via a FAISS HNSW index hosted on the HF Hub
+> (see *Vector search* below). Postgres stores **metadata + reranking features only**; the
+> `embedding` column exists just to build the FAISS index and is unused at serve time. The DB sits
+> at ~472 MB — read-only in production, so it won't grow into the cap. Full runbook:
+> [`../deploy/hf-space/DEPLOY.md`](../deploy/hf-space/DEPLOY.md).
+
+## Vector search — in-memory FAISS (not pgvector)
+
+A FAISS HNSW index is built offline from the embeddings and uploaded to the HF Hub model repo
+(`retrieval/ann/`). The Space loads it into RAM at startup and
+[`../backend/app/services/retrieval.py`](../backend/app/services/retrieval.py) runs ANN in-process
+(~5 ms) → fetches the Top-100 rows' metadata with `WHERE parent_asin = ANY(...)`. Rebuild + re-upload
+the index whenever embeddings change.
 
 ## Backend — local or free host
 
