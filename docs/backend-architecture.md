@@ -40,11 +40,12 @@ The response carries `recommendations` plus a `latency` dict
 
 ### retrieval.py
 - Encodes the query with the shared `model` (BGE-M3) → 1024-dim vector.
-- Runs `RETRIEVE_SQL`: `ORDER BY embedding <=> %s::vector LIMIT n` with
-  `1 - (embedding <=> v)` as the cosine `score`; filters `WHERE embedding IS NOT NULL`.
+- Searches the in-memory FAISS HNSW index for the Top-N `parent_asin`s (converting
+  squared-L2 of unit vectors to a cosine `score`), then runs `FETCH_SQL`
+  (`WHERE parent_asin = ANY(%s)`) to load their metadata in one batched query.
 - Returns candidate dicts including the metadata needed downstream (`title`, `price`,
   `average_rating`, `rating_number`, `store`, `features`, `description`, `top_reviews`,
-  `details`, `image`, `embedding_text`, `score`).
+  `details`, `image`, `score`).
 - Empty/blank query short-circuits to `[]`.
 
 ### reranking.py

@@ -15,7 +15,7 @@ serving path needs no joins.
 |---|---|---|
 | `parent_asin` | `VARCHAR(20)` PK | product id |
 | `title` | `TEXT NOT NULL` | product name (→ `item_name`) |
-| `embedding_text` | `TEXT` | text that was embedded (Title + keywords + summary + features) |
+| `embedding_text` | `TEXT` | text that was embedded (Title + keywords + summary + features); only the offline ML pipeline reads/writes it — the API never selects it, and the live Supabase DB keeps it NULL to stay under the 500 MB free cap |
 | `embedding` | `halfvec(1024)` | fine-tuned BGE-M3 embedding (cosine); `halfvec` (2 bytes/dim) halves storage/index RAM to fit the Supabase free tier — requires pgvector ≥ 0.7 |
 | **Explanation metadata** | | passed to Gemini |
 | `description` | `TEXT` | |
