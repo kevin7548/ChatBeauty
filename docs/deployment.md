@@ -108,6 +108,14 @@ only piece of the pipeline that was always free and stays unchanged.
   the route logs the per-stage `latency` breakdown; responses carry an `X-Total-Latency-Ms`
   header. On a free host these go to that host's log viewer (or stdout locally).
 - **Metrics/alerting:** no managed dashboards on the free tier; rely on the logs + header.
+- **Keep-alive & self-healing:** `.github/workflows/keepalive.yml` runs daily. It pings
+  Supabase (free projects auto-pause after ~7 idle days, which crashes the backend at startup)
+  and the Space's `/health` (free Spaces sleep after ~48 idle hours → ~5-min cold start), and
+  restarts the Space via the HF API if it's stuck in `RUNTIME_ERROR` — a crashed Space never
+  recovers on its own. A failed run means both the ping and the restart failed; GitHub emails
+  the repo owner, so a red run doubles as an uptime alert. Requires repo secrets
+  `SUPABASE_DB_URL` and `HF_TOKEN`. (Added after the 2026-07-10 outage: Supabase paused →
+  Space crashed → stayed dead until a manual `POST .../restart`.)
 
 ---
 
