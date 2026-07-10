@@ -1,0 +1,79 @@
+# Keeps the free-tier services from going to sleep, and self-heals the backend.
+#
+# Why this exists (2026-07-10 outage postmortem):
+#   1. Supabase free projects AUTO-PAUSE after ~7 days without any DB activity.
+#      While paused, the connection pooler rejects logins, which crashes the
+#      backend HF Space at startup.
+#   2. A crashed HF Space stays in RUNTIME_ERROR forever — it never restarts
+#      itself, even after the database comes back.
+#   3. Free HF Spaces also go to sleep after ~48h without HTTP traffic, giving
+#      the next visitor a ~5-minute cold start (the Space re-downloads ~2.6 GB).
+#
+# So once a day this workflow:
+#   - runs `SELECT 1` against Supabase        → resets the 7-day pause timer
+#   - hits the Space's /health endpoint       → resets the 48h sleep timer
+#   - if the Space is in RUNTIME_ERROR, restarts it via the HF API and waits
+#     for it to come back
+# If any step still fails, the workflow fails and GitHub emails the repo owner —
+# which doubles as free uptime monitoring.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL  postgres connection string (same as the Space's DATABASE_URL)
+#   HF_TOKEN         Hugging Face token with write access to the Space
+
+name: Keep free-tier services awake
+
+on:
+  schedule:
+    # Daily at 21:23 UTC (06:23 KST). GitHub crons can lag a few minutes;
+    # exact time doesn't matter, only that it runs well inside every 48h window.
+    - cron: "23 21 * * *"
+  # Allows manual runs from the Actions tab (useful for testing).
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase (resets the 7-day auto-pause timer)
+        run: psql "$DATABASE_URL" -tAc "SELECT 1;"
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Ping backend Space, restart it if it crashed
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPACE_API: https://huggingface.co/api/spaces/kevin7548/chatbeauty-backend
+          HEALTH_URL: https://kevin7548-chatbeauty-backend.hf.space/health
+        run: |
+          set -u
+
+          health() { curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$HEALTH_URL" || true; }
+
+          if [ "$(health)" = "200" ]; then
+            echo "Space is healthy."
+            exit 0
+          fi
+
+          stage=$(curl -s "$SPACE_API" | jq -r '.runtime.stage')
+          echo "Space unhealthy (stage: $stage)"
+
+          # RUNTIME_ERROR / BUILD_ERROR never recover on their own — kick a restart.
+          # SLEEPING / *ING stages just need time, so we only wait for those.
+          case "$stage" in
+            RUNTIME_ERROR|BUILD_ERROR|STOPPED|PAUSED)
+              echo "Restarting Space via HF API..."
+              curl -sf -X POST -H "Authorization: Bearer $HF_TOKEN" "$SPACE_API/restart" > /dev/null
+              ;;
+          esac
+
+          # Cold start re-downloads ~2.6 GB; give it up to ~12 minutes.
+          for i in $(seq 1 24); do
+            sleep 30
+            code=$(health)
+            echo "attempt $i: /health -> $code"
+            [ "$code" = "200" ] && { echo "Space recovered."; exit 0; }
+          done
+
+          echo "Space is still down — investigate (see the outage runbook in docs/deployment.md)."
+          exit 1
