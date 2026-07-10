@@ -38,7 +38,6 @@ def _make_candidate(i: int) -> dict:
         "top_reviews": "Reviewers liked it.",
         "details": "details blob",
         "image": f"https://example.com/{i}.jpg",
-        "embedding_text": "embedding text",
         # descending so the stub reranker's order is deterministic
         "score": round(0.9 - i * 0.001, 6),
     }

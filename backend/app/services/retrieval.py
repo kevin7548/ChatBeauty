@@ -33,8 +33,7 @@ FETCH_SQL = """
         description,
         top_reviews,
         details,
-        image,
-        embedding_text
+        image
     FROM products
     WHERE parent_asin = ANY(%s)
 """
@@ -90,7 +89,6 @@ def retrieve_candidates(query: str, n: int = 100):
             "top_reviews": row[8] or "",
             "details": row[9] or "",
             "image": row[10] or "",
-            "embedding_text": row[11] or "",
             "score": round(score_by_asin[asin], 6),
         })
 
