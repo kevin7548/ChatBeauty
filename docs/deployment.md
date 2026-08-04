@@ -108,14 +108,24 @@ only piece of the pipeline that was always free and stays unchanged.
   the route logs the per-stage `latency` breakdown; responses carry an `X-Total-Latency-Ms`
   header. On a free host these go to that host's log viewer (or stdout locally).
 - **Metrics/alerting:** no managed dashboards on the free tier; rely on the logs + header.
-- **Keep-alive & self-healing:** `.github/workflows/keepalive.yml` runs daily. It pings
-  Supabase (free projects auto-pause after ~7 idle days, which crashes the backend at startup)
-  and the Space's `/health` (free Spaces sleep after ~48 idle hours → ~5-min cold start), and
-  restarts the Space via the HF API if it's stuck in `RUNTIME_ERROR` — a crashed Space never
-  recovers on its own. A failed run means both the ping and the restart failed; GitHub emails
-  the repo owner, so a red run doubles as an uptime alert. Requires repo secrets
-  `SUPABASE_DB_URL` and `HF_TOKEN`. (Added after the 2026-07-10 outage: Supabase paused →
-  Space crashed → stayed dead until a manual `POST .../restart`.)
+- **Keep-alive & self-healing:** `.github/workflows/keepalive.yml` runs twice daily. It wakes
+  the Space (restarting it via the HF API if it's stuck in `RUNTIME_ERROR` — a crashed Space
+  never recovers on its own), then **runs a real `POST /recommend` product search**, asserting
+  HTTP 200 with ≥1 result. Every step uses `if: always()` and a final `Report` step decides the
+  outcome, so one broken layer can't mask the others. A red run means the site is genuinely not
+  serving recommendations, and GitHub's failure email doubles as uptime alerting. Requires
+  `HF_TOKEN`; optional `SUPABASE_DB_URL` powers an advisory DB-reachability diagnostic that
+  distinguishes "project paused" from "Space broken".
+- **Why a real search, not a DB ping:** the first version (2026-07-10) ran `psql SELECT 1`
+  daily. It **succeeded every day from 07-10 to 07-16 and Supabase auto-paused anyway on
+  07-17**, taking the site down for ~18 days — a bare pooler query does not appear to count as
+  project activity. That version also ran the DB step first under `bash -e`, so a DB outage
+  killed the job before the Space-restart step could run. Both are fixed above.
+- **If Supabase pauses anyway:** a paused project cannot be revived from CI (its DNS is torn
+  down — `db.<ref>.supabase.co` goes `NXDOMAIN`). Restore it from the Supabase dashboard, then
+  re-run the keep-alive workflow to bring the Space back. If pauses keep happening despite real
+  traffic, the free tier can't be kept awake externally and the real options are Supabase Pro or
+  a host without auto-pause (e.g. Neon) — not a smarter cron.
 
 ---
 

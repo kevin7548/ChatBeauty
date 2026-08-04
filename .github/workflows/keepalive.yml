@@ -1,79 +1,174 @@
-# Keeps the free-tier services from going to sleep, and self-heals the backend.
+# Keeps the free-tier stack alive by USING it, and self-heals the backend.
 #
-# Why this exists (2026-07-10 outage postmortem):
-#   1. Supabase free projects AUTO-PAUSE after ~7 days without any DB activity.
-#      While paused, the connection pooler rejects logins, which crashes the
-#      backend HF Space at startup.
-#   2. A crashed HF Space stays in RUNTIME_ERROR forever — it never restarts
-#      itself, even after the database comes back.
-#   3. Free HF Spaces also go to sleep after ~48h without HTTP traffic, giving
-#      the next visitor a ~5-minute cold start (the Space re-downloads ~2.6 GB).
+# History / why it looks like this:
+#   v1 (2026-07-10) pinged the DB with `psql SELECT 1`. That ping succeeded every
+#   day from 07-10 to 07-16 and Supabase auto-paused the project anyway on 07-17
+#   — a bare pooler query does not appear to count as project activity. v1 also
+#   ran the DB step first under `bash -e`, so once the DB was down the job died
+#   at step 1 and the Space-restart step never ran, disabling the self-healing.
 #
-# So once a day this workflow:
-#   - runs `SELECT 1` against Supabase        → resets the 7-day pause timer
-#   - hits the Space's /health endpoint       → resets the 48h sleep timer
-#   - if the Space is in RUNTIME_ERROR, restarts it via the HF API and waits
-#     for it to come back
-# If any step still fails, the workflow fails and GitHub emails the repo owner —
-# which doubles as free uptime monitoring.
+# v2 therefore:
+#   - drives a REAL product search (POST /recommend) instead of a bare ping, so
+#     the whole stack gets exercised the way a visitor would: Space HTTP ->
+#     BGE-M3 encode -> FAISS ANN -> a genuine `products` SELECT -> LightGBM ->
+#     Gemini. This is normal application traffic, which is what Supabase's
+#     activity tracking is meant to see.
+#   - restarts a crashed Space FIRST (a Space in RUNTIME_ERROR never recovers on
+#     its own), because the search can't run until the backend is up.
+#   - runs every step with `if: always()` and decides pass/fail at the end, so
+#     one broken layer can no longer mask the others. A red run means the site is
+#     genuinely down and GitHub emails you — free uptime monitoring.
 #
-# Required repo secrets (Settings → Secrets and variables → Actions):
-#   SUPABASE_DB_URL  postgres connection string (same as the Space's DATABASE_URL)
-#   HF_TOKEN         Hugging Face token with write access to the Space
+# NOTE: if Supabase still pauses despite real traffic, the free tier simply
+# cannot be kept awake from outside and the fix is a plan/host change, not a
+# smarter cron. See docs/deployment.md.
+#
+# Required repo secrets: HF_TOKEN (write access to the Space).
+# Optional: SUPABASE_DB_URL — only used for a diagnostic ping that never fails
+# the run on its own.
 
 name: Keep free-tier services awake
 
 on:
   schedule:
-    # Daily at 21:23 UTC (06:23 KST). GitHub crons can lag a few minutes;
-    # exact time doesn't matter, only that it runs well inside every 48h window.
-    - cron: "23 21 * * *"
-  # Allows manual runs from the Actions tab (useful for testing).
+    # Twice daily (07:23 and 19:23 KST). More than enough for the ~7-day pause
+    # window and the ~48h Space sleep window, and cheap: 2 Gemini calls a day.
+    - cron: "23 22 * * *"
+    - cron: "23 10 * * *"
   workflow_dispatch:
+
+# Never let two runs restart the Space at the same time.
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
 
 jobs:
   keepalive:
     runs-on: ubuntu-latest
+    env:
+      SPACE_API: https://huggingface.co/api/spaces/kevin7548/chatbeauty-backend
+      BASE_URL: https://kevin7548-chatbeauty-backend.hf.space
     steps:
-      - name: Ping Supabase (resets the 7-day auto-pause timer)
-        run: psql "$DATABASE_URL" -tAc "SELECT 1;"
-        env:
-          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-
-      - name: Ping backend Space, restart it if it crashed
+      # ---------------------------------------------------------------- backend
+      - name: Wake the backend Space (restart it if it crashed)
+        id: space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          SPACE_API: https://huggingface.co/api/spaces/kevin7548/chatbeauty-backend
-          HEALTH_URL: https://kevin7548-chatbeauty-backend.hf.space/health
         run: |
           set -u
-
-          health() { curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$HEALTH_URL" || true; }
+          health() { curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BASE_URL/health" || true; }
 
           if [ "$(health)" = "200" ]; then
-            echo "Space is healthy."
+            echo "Space already healthy."
             exit 0
           fi
 
           stage=$(curl -s "$SPACE_API" | jq -r '.runtime.stage')
-          echo "Space unhealthy (stage: $stage)"
+          echo "Space not healthy (stage: $stage)"
 
-          # RUNTIME_ERROR / BUILD_ERROR never recover on their own — kick a restart.
-          # SLEEPING / *ING stages just need time, so we only wait for those.
+          # These states never recover on their own — kick a restart.
           case "$stage" in
-            RUNTIME_ERROR|BUILD_ERROR|STOPPED|PAUSED)
-              echo "Restarting Space via HF API..."
-              curl -sf -X POST -H "Authorization: Bearer $HF_TOKEN" "$SPACE_API/restart" > /dev/null
+            RUNTIME_ERROR|BUILD_ERROR|STOPPED|PAUSED|SLEEPING)
+              echo "Restarting Space via the HF API..."
+              curl -sf -X POST -H "Authorization: Bearer $HF_TOKEN" "$SPACE_API/restart" > /dev/null \
+                || echo "Restart call failed (bad/expired HF_TOKEN?)"
               ;;
           esac
 
-          # Cold start re-downloads ~2.6 GB; give it up to ~12 minutes.
+          # A cold start re-downloads ~2.6 GB of model + FAISS index; allow ~12 min.
           for i in $(seq 1 24); do
             sleep 30
             code=$(health)
             echo "attempt $i: /health -> $code"
-            [ "$code" = "200" ] && { echo "Space recovered."; exit 0; }
+            if [ "$code" = "200" ]; then
+              echo "Space is up."
+              exit 0
+            fi
           done
 
-          echo "Space is still down — investigate (see the outage runbook in docs/deployment.md)."
+          echo "::error::Space did not come up. If the DB is paused it will crash on boot forever."
           exit 1
+
+      # ------------------------------------------------------- the real traffic
+      # This is the step that matters for keeping the project active: a genuine
+      # end-to-end product search, identical to what the website sends.
+      - name: Run a real product search
+        id: search
+        if: always()
+        run: |
+          set -u
+
+          # Rotate the query by day so we never look like a single cached request.
+          queries=(
+            "I have thin hair and want a volumizing shampoo"
+            "gentle fragrance-free moisturizer for sensitive dry skin"
+            "long-lasting matte lipstick for oily skin"
+            "sunscreen for daily use that doesn't leave a white cast"
+            "anti-frizz hair serum for humid weather"
+            "vitamin C serum for dark spots and dull skin"
+            "waterproof mascara that is easy to remove"
+          )
+          q="${queries[$(( $(date +%j) % ${#queries[@]} ))]}"
+          echo "Query: $q"
+
+          body=$(jq -nc --arg u "$q" '{user_input: $u}')
+          code=$(curl -s --max-time 180 -o resp.json -w "%{http_code}" \
+                   -X POST "$BASE_URL/recommend" \
+                   -H "Content-Type: application/json" \
+                   -d "$body" || echo "000")
+
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "--- response ---"; head -c 800 resp.json || true; echo
+            echo "::error::Product search failed (HTTP $code) — the site is down for visitors."
+            exit 1
+          fi
+
+          # A 200 with zero results still means the DB read is broken, so assert
+          # we actually got products back.
+          n=$(jq '.recommendations | length' resp.json)
+          echo "recommendations: $n"
+          jq -r '.latency // {} | to_entries[] | "  \(.key): \(.value)"' resp.json || true
+          if [ "${n:-0}" -lt 1 ]; then
+            echo "::error::Search returned 0 products — retrieval or the DB read is broken."
+            exit 1
+          fi
+          jq -r '.recommendations[0].item_name // .recommendations[0].title // "?"' resp.json \
+            | sed 's/^/  top hit: /'
+          echo "Search OK — the stack was exercised end to end."
+
+      # ------------------------------------------------------------ diagnostics
+      # Advisory only: tells the difference between "DB paused" and "Space broken"
+      # in the failure email. Never fails the run by itself.
+      - name: Diagnostic — direct DB reachability
+        if: always()
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "SUPABASE_DB_URL not set — skipping."
+            exit 0
+          fi
+          if psql "$DATABASE_URL" -tAc "SELECT count(*) FROM products;" 2>db_err.txt; then
+            echo "DB reachable."
+          else
+            echo "DB UNREACHABLE:"; cat db_err.txt
+            if grep -q "ENOTFOUND\|not found" db_err.txt; then
+              echo "Looks like the Supabase project is PAUSED — restore it from the dashboard;"
+              echo "no amount of retrying from CI can bring a paused project back."
+            fi
+          fi
+
+      # Single place that decides the run's colour, so no earlier failure can
+      # short-circuit the steps after it.
+      - name: Report
+        if: always()
+        run: |
+          echo "Space wake : ${{ steps.space.outcome }}"
+          echo "Product search: ${{ steps.search.outcome }}"
+          if [ "${{ steps.search.outcome }}" != "success" ]; then
+            echo "::error::Keep-alive failed — ChatBeauty is not serving recommendations."
+            exit 1
+          fi
+          echo "ChatBeauty is alive."
