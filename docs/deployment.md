@@ -108,7 +108,9 @@ only piece of the pipeline that was always free and stays unchanged.
   the route logs the per-stage `latency` breakdown; responses carry an `X-Total-Latency-Ms`
   header. On a free host these go to that host's log viewer (or stdout locally).
 - **Metrics/alerting:** no managed dashboards on the free tier; rely on the logs + header.
-- **Keep-alive & self-healing:** `.github/workflows/keepalive.yml` runs twice daily. It wakes
+- **Keep-alive & self-healing:** `.github/workflows/keepalive.yml` runs weekly — on Mon and Thu,
+  deliberately two runs rather than one every 7 days, since Supabase's pause threshold is ~7 days
+  and a single missed run would otherwise open a 14-day gap. It wakes
   the Space (restarting it via the HF API if it's stuck in `RUNTIME_ERROR` — a crashed Space
   never recovers on its own), then **runs a real `POST /recommend` product search**, asserting
   HTTP 200 with ≥1 result. Every step uses `if: always()` and a final `Report` step decides the

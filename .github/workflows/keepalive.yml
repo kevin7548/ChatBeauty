@@ -31,10 +31,15 @@ name: Keep free-tier services awake
 
 on:
   schedule:
-    # Twice daily (07:23 and 19:23 KST). More than enough for the ~7-day pause
-    # window and the ~48h Space sleep window, and cheap: 2 Gemini calls a day.
-    - cron: "23 22 * * *"
-    - cron: "23 10 * * *"
+    # Weekly, but deliberately run TWICE (Mon + Thu) rather than once every 7 days.
+    # Supabase's pause threshold is ~7 days, so a true 7-day interval has zero
+    # margin: GitHub's scheduled runs drift several minutes late under load, and a
+    # single failed/skipped run would leave a 14-day gap — exactly the gap that
+    # took the site down on 2026-07-17. Two spaced runs give ~3.5 days of slack
+    # and still cost only ~8 Gemini calls a month.
+    # (Mon/Thu 22:23 UTC = Tue/Fri 07:23 KST.)
+    - cron: "23 22 * * 1"
+    - cron: "23 22 * * 4"
   workflow_dispatch:
 
 # Never let two runs restart the Space at the same time.
