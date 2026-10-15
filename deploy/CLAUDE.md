@@ -4,9 +4,9 @@ Free-tier deployment for the backend.
 
 - **`hf-space/`** — the **live** deployment: a Hugging Face Docker Space (`Dockerfile`, `start.sh`,
   `README.md` Space card) + **`DEPLOY.md`** (the end-to-end runbook).
-- **`setup-gcp.sh`** — the **retired** paid-GCP script (Cloud Run / Cloud SQL / GCS), kept for
-  historical reference only. Paid GCP was torn down 2026-06-02 — do **not** run it without an
-  explicit decision to spend money.
+- Paid GCP (Cloud Run / Cloud SQL / GCS) was torn down 2026-06-02 and its script removed; the
+  history is in `docs/deployment.md`. Do **not** recreate it without an explicit decision to
+  spend money.
 
 ## Live stack (free, $0)
 Vercel (frontend) → **Hugging Face Docker Space** (FastAPI) → **Supabase** (Postgres) + Gemini.

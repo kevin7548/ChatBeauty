@@ -260,7 +260,8 @@ The whole stack runs at $0: load Supabase, push the models + FAISS index to the 
 backend as a Hugging Face Docker Space, and point Vercel at it. Step-by-step runbook:
 **[deploy/hf-space/DEPLOY.md](deploy/hf-space/DEPLOY.md)**.
 
-> `deploy/setup-gcp.sh` is the retired paid-GCP script, kept only for historical reference.
+> The retired paid-GCP deployment (Cloud Run / Cloud SQL) is documented in the History section of
+> [docs/deployment.md](docs/deployment.md#history--how-the-deployment-got-here).
 
 ---
 
@@ -313,8 +314,7 @@ backend as a Hugging Face Docker Space, and point Vercel at it. Step-by-step run
 │   └── model/                   #   trained models (not in git)
 ├── frontend/                    # React frontend
 ├── deploy/
-│   ├── hf-space/                #   Hugging Face Space (Dockerfile, start.sh, DEPLOY.md)
-│   └── setup-gcp.sh             #   retired paid-GCP script (historical)
+│   └── hf-space/                #   Hugging Face Space (Dockerfile, start.sh, DEPLOY.md)
 ├── docs/                        # Detailed docs (architecture, api-spec, db-schema, ...)
 ├── images/                      # README images
 └── README.md

@@ -110,12 +110,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: gcloud builds submit --tag ...   # build image (from deploy/setup-gcp.sh)
+      - run: gcloud builds submit --tag ...   # build image (as the former deploy/setup-gcp.sh did)
       - run: gcloud run deploy chatbeauty-backend --image ...
 ```
 
 The deploy steps aren't invented — they're the same `gcloud builds submit` / `gcloud run deploy`
-commands already documented in `deploy/setup-gcp.sh`. CI/CD just *automates running them* and gates
+commands the (now removed) `deploy/setup-gcp.sh` ran by hand. CI/CD just *automates running them* and gates
 them behind passing tests.
 
 ### Why we're doing this

@@ -1,8 +1,9 @@
 """
 Shared resources for the retrieval service.
 
-Loads the BGE-M3 model once at startup and provides a PostgreSQL
-connection pool for pgvector similarity search.
+Loads the BGE-M3 query encoder and the in-memory FAISS HNSW index once at
+startup, and provides a PostgreSQL connection pool for product metadata and
+reranking-feature lookups. Vector search does not run in Postgres.
 """
 
 import os
@@ -21,18 +22,18 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 MODEL_PATH = os.environ.get(
     "BGE_MODEL_PATH",
-    str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "bge-m3-finetuned-20260202-120852"),
+    str(BASE_DIR / "ml" / "model" / "retrieval" / "bge-m3-finetuned-20260202-120852"),
 )
 
 # In-memory ANN index (FAISS HNSW) — vector search runs in-process instead of in
 # Postgres, because the embeddings + index don't fit the Supabase free-tier cap.
 ANN_INDEX_PATH = os.environ.get(
     "ANN_INDEX_PATH",
-    str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "ann" / "faiss_hnsw_cosine.index"),
+    str(BASE_DIR / "ml" / "model" / "retrieval" / "ann" / "faiss_hnsw_cosine.index"),
 )
 ANN_ASINS_PATH = os.environ.get(
     "ANN_ASINS_PATH",
-    str(BASE_DIR / "ml" / "model-gcs" / "retrieval" / "ann" / "asins.json"),
+    str(BASE_DIR / "ml" / "model" / "retrieval" / "ann" / "asins.json"),
 )
 ANN_EF_SEARCH = int(os.environ.get("ANN_EF_SEARCH", "100"))
 
@@ -54,8 +55,8 @@ logger.info(
 )
 
 # PostgreSQL connection pool (min 1, max 5 connections)
-# TCP keepalives help detect dead sockets faster when Cloud Run pauses
-# instances between requests.
+# TCP keepalives help detect dead sockets faster when the host sleeps or the
+# Supabase pooler drops idle connections.
 db_pool = pool.ThreadedConnectionPool(
     1,
     5,
@@ -71,10 +72,10 @@ def get_db_connection():
     """
     Get a live connection from the pool.
 
-    Cloud Run pauses instances between requests, which can silently kill
-    pooled TCP connections. We run a cheap liveness check (SELECT 1) before
-    handing the connection back to the caller; if it fails we discard the
-    dead connection and fetch a fresh one.
+    Pooled TCP connections can die silently while idle (host sleep, Supabase
+    pooler timeouts, or a paused Supabase project). We run a cheap liveness
+    check (SELECT 1) before handing the connection back to the caller; if it
+    fails we discard the dead connection and fetch a fresh one.
     """
     conn = db_pool.getconn()
     try:

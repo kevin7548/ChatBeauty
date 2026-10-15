@@ -263,7 +263,8 @@ python -m ml.pipeline.run \
 백엔드를 Hugging Face Docker Space로 배포 → Vercel `VITE_API_URL`을 Space로 지정.
 단계별 런북: **[deploy/hf-space/DEPLOY.md](deploy/hf-space/DEPLOY.md)**.
 
-> `deploy/setup-gcp.sh`는 폐기된 유료 GCP 스크립트로, 참고용으로만 남겨두었습니다.
+> 폐기된 유료 GCP 배포(Cloud Run / Cloud SQL) 이력은
+> [docs/deployment.md](docs/deployment.md#history--how-the-deployment-got-here)의 History 절에 정리했습니다.
 
 ---
 
@@ -316,8 +317,7 @@ python -m ml.pipeline.run \
 │   └── model/                   #   학습된 모델 (git 미포함)
 ├── frontend/                    # React 프론트엔드
 ├── deploy/
-│   ├── hf-space/                #   Hugging Face Space (Dockerfile, start.sh, DEPLOY.md)
-│   └── setup-gcp.sh             #   폐기된 유료 GCP 스크립트 (참고용)
+│   └── hf-space/                #   Hugging Face Space (Dockerfile, start.sh, DEPLOY.md)
 ├── docs/                        # 상세 문서 (architecture, api-spec, db-schema 등)
 ├── images/                      # README 이미지
 └── README.md

@@ -22,10 +22,11 @@ RUN pip install -e ml/
 # Copy application code
 COPY backend/app/ app/
 
-# Models are loaded from GCS volume mount at /app/ml/model-gcs/
-# Required:
-#   /app/ml/model-gcs/retrieval/bge-m3-finetuned-20260202-120852/
-#   /app/ml/model-gcs/reranking/lgbm_reranker_current_features_v1.pkl
+# Models are not baked into the image. docker-compose mounts the local ml/model/
+# read-only at /app/ml/model/ (the default paths in app/services/). Required:
+#   /app/ml/model/retrieval/bge-m3-finetuned-20260202-120852/
+#   /app/ml/model/retrieval/ann/faiss_hnsw_cosine.index + asins.json
+#   /app/ml/model/reranking/lgbm_reranker_current_features_v1.pkl
 
 EXPOSE 8080
 

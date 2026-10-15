@@ -47,7 +47,7 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # ── ML models & datasets ──────────────────────────────────────
-# Large artifacts; deployed via GCS, never committed. The .gitkeep
+# Large artifacts; deployed via the HF Hub model repo, never committed. The .gitkeep
 # files are kept so a fresh clone still has the directory skeleton.
 ml/data/**
 ml/model/**

@@ -34,7 +34,7 @@ backend/
 │
 ├── notebooks/                    # Colab 노트북
 │   ├── retrieve_and_train_lgbm.py  # LightGBM 학습 (T4 GPU)
-│   └── embed_products_colab.ipynb  # 임베딩 계산 (T4 GPU)
+│   └── embed_products_supabase.ipynb  # 임베딩 계산 → Supabase (T4 GPU)
 │
 ├── sql/init.sql                  # PostgreSQL 스키마 (pgvector)
 ├── Dockerfile
@@ -111,7 +111,7 @@ RAM에 로드해 ANN 검색(~5ms)을 수행합니다. Postgres는 메타데이�
 
 전체 런북: [deploy/hf-space/DEPLOY.md](../deploy/hf-space/DEPLOY.md). 요약: 모델+FAISS 인덱스를
 HF Hub에 업로드 → 백엔드를 Hugging Face Docker Space로 배포 → Vercel `VITE_API_URL`을 Space로 지정.
-(과거 GCP 스크립트 [deploy/setup-gcp.sh](../deploy/setup-gcp.sh)는 폐기됨, 참고용.)
+(폐기된 유료 GCP 배포 이력: [docs/deployment.md](../docs/deployment.md#history--how-the-deployment-got-here).)
 
 ### 6. 확인
 

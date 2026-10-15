@@ -6,8 +6,14 @@ End-to-end local setup for the whole stack. Layers: [backend](backend-architectu
 
 ## Prerequisites
 - Docker + docker-compose, Python 3.12, Node 18+.
-- A `GEMINI_API_KEY` (explanations) and the trained models under `ml/model/`
-  (`retrieval/bge-m3-finetuned-20260202-120852/`, `reranking/lgbm_reranker_current_features_v1.pkl`).
+- A `GEMINI_API_KEY` (explanations) and the model artifacts under `ml/model/`:
+  `retrieval/bge-m3-finetuned-20260202-120852/`, `retrieval/ann/{faiss_hnsw_cosine.index,asins.json}`,
+  `reranking/lgbm_reranker_current_features_v1.pkl`. They live in the HF Hub model repo
+  (`kevin7548/chatbeauty-models`, same layout); pull whatever is missing locally:
+
+  ```bash
+  huggingface-cli download kevin7548/chatbeauty-models --local-dir ml/model
+  ```
 
 ## 1. Backend + database (Docker)
 
@@ -19,8 +25,9 @@ docker-compose up --build -d  # Postgres (pgvector) + FastAPI on :8080
 docker-compose exec -T db psql -U chatbeauty -d chatbeauty < sql/init.sql
 ```
 
-docker-compose mounts `ml/model/...` read-only into the backend at `/app/ml/model-gcs/`,
-so the models must exist locally.
+docker-compose mounts `ml/model/` read-only into the backend at `/app/ml/model/` (the
+backend's default model paths), so the artifacts above — including the FAISS `retrieval/ann/`
+index — must exist locally or the backend fails at import time.
 
 > **Hosted free DB option:** instead of the local docker-compose Postgres, point `DATABASE_URL`
 > at a **Supabase** free-tier project (Postgres + pgvector + `halfvec`). This is the project's
@@ -47,13 +54,10 @@ python -m ml.scripts.embed_products \
   --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty
 ```
 
-(Or use `ml/notebooks/embed_products_colab.ipynb` on a GPU.) Then build the HNSW index
-once embeddings exist:
-
-```sql
-CREATE INDEX idx_products_embedding ON products
-  USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);
-```
+(Or use `ml/notebooks/embed_products_supabase.ipynb` on a Colab GPU.) Serving does **not**
+use a pgvector index: rebuild the in-memory FAISS HNSW index from the new embeddings and
+place it under `ml/model/retrieval/ann/` (procedure: [DEPLOY.md](../deploy/hf-space/DEPLOY.md),
+Phase B). If you only need to run the stack, skip this step and use the index from the HF Hub.
 
 ## 4. Frontend
 
@@ -75,9 +79,11 @@ curl -X POST http://localhost:8080/recommend \
   -d '{"user_input":"gentle moisturizer for dry skin"}'   # Top-5 + latency
 ```
 
-> There is no automated test suite yet
-> ([Known limitations](architecture.md#known-limitations--future-work)); verification is
-> manual via `/health` + a sample `/recommend`.
+Offline tests (no models/DB/Gemini needed — services are stubbed):
+
+```bash
+cd backend && python -m pytest
+```
 
 ## Keeping docs current
 `docs/` is the source of truth. When you change a contract, update the matching doc in the

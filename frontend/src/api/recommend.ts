@@ -21,11 +21,11 @@ export async function fetchRecommend(
 }
 
 /**
- * Warm up the Cloud Run backend.
+ * Warm up the backend (free-tier Hugging Face Space).
  *
- * The backend runs with min-instances=0, so after a period of inactivity
- * the instance is shut down. The first request after that pays the full
- * cold-start cost (~60s) because the embedding model has to load into RAM.
+ * The free Space sleeps after a period of inactivity. The first request
+ * after that pays the full cold-start cost (~60s) because the embedding
+ * model and the FAISS index have to load into RAM.
  *
  * We call /health as soon as the page loads so the instance wakes up
  * while the user is still reading the hero section. By the time they

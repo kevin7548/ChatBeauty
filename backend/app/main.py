@@ -1,4 +1,10 @@
 import os
+from dotenv import load_dotenv
+
+# Load backend/.env before importing the routes: the service modules read
+# DATABASE_URL / *_MODEL_PATH / ANN_* at import time.
+load_dotenv()
+
 from fastapi import FastAPI
 from app.api.routes import recommend
 from fastapi.middleware.cors import CORSMiddleware

@@ -25,10 +25,12 @@ services:
     depends_on:
       - db
     volumes:
-      # Mount BGE-M3 model (read-only, needed for query encoding)
-      - ../ml/model/retrieval/bge-m3-finetuned-20260202-120852:/app/ml/model-gcs/retrieval/bge-m3-finetuned-20260202-120852:ro
-      # Mount LightGBM reranker model
-      - ../ml/model/reranking:/app/ml/model-gcs/reranking:ro
+      # Model artifacts, read-only, at the backend's default paths (/app/ml/model/...):
+      #   retrieval/bge-m3-finetuned-20260202-120852/   BGE-M3 query encoder
+      #   retrieval/ann/{faiss_hnsw_cosine.index,asins.json}   in-memory FAISS index
+      #   reranking/lgbm_reranker_current_features_v1.pkl      LightGBM reranker
+      # Fetch them from the HF Hub model repo first — see docs/development.md.
+      - ../ml/model:/app/ml/model:ro
     restart: unless-stopped
 
 volumes:
