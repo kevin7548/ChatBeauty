@@ -25,10 +25,11 @@ jobs:
       # explanation services in tests/conftest.py *before* importing the app, so it
       # runs fully offline — no BGE-M3, LightGBM, Postgres, or Gemini key required.
       # That means CI only needs the web framework + test tools, not the heavy ML
-      # deps (torch etc.), which keeps each run to ~40s. If the app ever gains a
+      # deps (torch etc.), which keeps each run to ~40s. python-dotenv is here because
+      # app/main.py loads .env before importing the routes. If the app ever gains a
       # top-level heavy import outside the stubbed services, add it here.
       - name: Install dependencies
-        run: pip install "fastapi>=0.128.0,<0.129.0" pytest httpx ruff
+        run: pip install "fastapi>=0.128.0,<0.129.0" python-dotenv pytest httpx ruff
 
       # Advisory for now (won't fail the build) — flip to a blocking gate once the
       # codebase is lint-clean by removing `continue-on-error`.

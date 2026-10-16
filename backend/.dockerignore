@@ -27,7 +27,6 @@ env/
 # Git
 .git/
 .gitignore
-.gcloudignore
 
 # Pipeline (not needed at runtime)
 ml/pipeline/

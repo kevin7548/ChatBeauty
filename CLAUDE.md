@@ -24,7 +24,7 @@ Use a task-type router to decide how to handle each request:
 ## Architecture
 
 ChatBeauty is an LLM/RAG beauty-product recommender. Per request, the FastAPI backend runs
-**Retrieval** (BGE-M3 + pgvector → Top-100) → **Reranking** (LightGBM → Top-5) →
+**Retrieval** (BGE-M3 + in-memory FAISS HNSW → Top-100) → **Reranking** (LightGBM → Top-5) →
 **Explanation** (Gemini 2.5 Flash, one batched call). The frontend is a React/Vite SPA; the
 `ml/` layer (Apache Beam pipeline, BGE-M3 fine-tuning, LightGBM) is offline. There is no
 authentication. Full picture: `docs/architecture.md`.

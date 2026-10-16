@@ -13,14 +13,14 @@ For per-layer detail see [backend-architecture.md](backend-architecture.md),
 ```mermaid
 flowchart LR
     User([User]) --> FE[React SPA<br/>Vercel]
-    FE -- "POST /recommend" --> API[FastAPI<br/>local / free host]
-    subgraph Pipeline["Per-request pipeline (~1.4s)"]
-        R[Retrieval<br/>BGE-M3 + pgvector<br/>~1100ms] --> RR[Reranking<br/>LightGBM<br/>~19ms] --> EX[Explanation<br/>Gemini 2.5 Flash<br/>~250ms]
+    FE -- "POST /recommend" --> API[FastAPI<br/>HF Space / local]
+    subgraph Pipeline["Per-request pipeline (~4.8s, free CPU)"]
+        R[Retrieval<br/>BGE-M3 + in-memory FAISS HNSW<br/>~1600ms] --> RR[Reranking<br/>LightGBM<br/>~850ms] --> EX[Explanation<br/>Gemini 2.5 Flash<br/>~2400ms]
     end
     API --> R
-    R <--> DB[(Supabase<br/>PostgreSQL + pgvector<br/>112K products)]
+    R <--> DB[(Supabase<br/>PostgreSQL<br/>112K products)]
     RR <--> DB
-    R -. model .- Models[local ml/model/<br/>BGE-M3 + LightGBM]
+    R -. model .- Models[HF Hub model repo / local ml/model/<br/>BGE-M3 + FAISS index + LightGBM]
     RR -. model .- Models
     EX --> Gemini[Gemini 2.5 Flash API]
     API --> FE
@@ -29,8 +29,9 @@ flowchart LR
 The runtime path is a two-stage retrieve-then-rerank recommender followed by an LLM
 explanation step:
 
-1. **Retrieval** — encode the user scenario with the fine-tuned BGE-M3 (1024-dim) and run
-   a pgvector cosine-similarity search to get the Top-100 candidate products.
+1. **Retrieval** — encode the user scenario with the fine-tuned BGE-M3 (1024-dim), search an
+   **in-memory FAISS HNSW** index (cosine) for the Top-100 candidates, then fetch their metadata
+   from Postgres. No pgvector index is used at serve time — it doesn't fit the Supabase free cap.
 2. **Reranking** — score the 100 candidates with a LightGBM LambdaRank model over 10
    metadata features and keep the Top-5.
 3. **Explanation** — Gemini 2.5 Flash writes a short, review-grounded reason for all 5
@@ -58,8 +59,9 @@ flowchart TD
 
 The pipeline is offline (Apache Beam DirectRunner) and produces two things: the populated
 `products` table and the BGE-M3 fine-tuning pairs. Embeddings are computed separately by
-`ml/scripts/embed_products.py` and written back to the same table. The HNSW vector
-index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pipeline.md).
+`ml/scripts/embed_products.py` (or the Colab notebook) and written back to the same table;
+the serving FAISS HNSW index is then built from those embeddings and uploaded to the HF Hub
+model repo (see [deploy/hf-space/DEPLOY.md](../deploy/hf-space/DEPLOY.md), Phase B). Details: [ml-pipeline.md](ml-pipeline.md).
 
 ## Components
 
@@ -67,18 +69,18 @@ index is built **after** embeddings are loaded. Details: [ml-pipeline.md](ml-pip
 |---|---|---|---|
 | Frontend | React 19 + TypeScript + Vite (SPA) | `frontend/` | [frontend-architecture.md](frontend-architecture.md) |
 | Backend API | FastAPI + Uvicorn | `backend/app/` | [backend-architecture.md](backend-architecture.md) |
-| Database | PostgreSQL 16 + pgvector (`halfvec` + HNSW) | `backend/sql/` | [db-schema.md](db-schema.md) |
+| Database | PostgreSQL 16 + pgvector (`halfvec` column; search runs in FAISS) | `backend/sql/` | [db-schema.md](db-schema.md) |
 | ML | BGE-M3 (fine-tuned), LightGBM, Apache Beam | `ml/` | [ml-pipeline.md](ml-pipeline.md) |
-| Deploy | Free-tier: Supabase (DB) + local/free-host backend + Vercel (paid GCP retired 2026-06-02) | `deploy/`, `backend/Dockerfile` | [deployment.md](deployment.md) |
+| Deploy | Free-tier: Supabase (DB) + HF Space (backend) + HF Hub (models) + Vercel (paid GCP retired 2026-06-02) | `deploy/`, `backend/Dockerfile` | [deployment.md](deployment.md) |
 
 ## Latency budget
 
 | Stage | Typical | Notes |
 |---|---|---|
-| Retrieval (pgvector HNSW) | ~1,100ms | dominated by query encoding + ANN search |
-| Reranking (LightGBM) | ~19ms | one batched DB feature lookup + predict |
-| Explanation (Gemini 2.5 Flash) | ~250ms | all 5 explanations in one call |
-| **Total** | **~1,400ms** | logged per request via `LatencyMiddleware` |
+| Retrieval (in-memory FAISS HNSW) | ~1,600ms | dominated by BGE-M3 query encoding; + one metadata DB query |
+| Reranking (LightGBM) | ~850ms | mostly the batched DB feature lookup; predict itself is fast |
+| Explanation (Gemini 2.5 Flash) | ~2,400ms | all 5 explanations in one call, thinking disabled |
+| **Total** | **~4,800ms** | free-tier HF Space CPU; logged per request via `LatencyMiddleware` |
 
 ## Known limitations & future work
 
@@ -87,9 +89,9 @@ rather than restating them.
 
 - **No authentication / rate limiting.** `/recommend` is a single public, unauthenticated
   endpoint. On any public (free) host this is exposed to abuse; API rate limiting is future work.
-- **No automated tests.** There is no pytest/vitest suite today; changes are verified by
-  running the stack and exercising `/health` + a sample `/recommend` (see
-  [development.md](development.md)). *Planned:* an integration test for `POST /recommend`.
+- **Thin test coverage.** `backend/tests/test_recommend.py` is an offline integration test
+  for `POST /recommend` (services stubbed in `conftest.py`) and runs in GitHub Actions CI on
+  every PR. There are no frontend or ML tests, and no test exercises the real models/DB.
 - **No DB migration tool.** Schema is applied by running `backend/sql/init.sql` directly;
   there is no Alembic/migration history. Adopting a migration tool is a future option
   (see [db-schema.md](db-schema.md)).
@@ -98,6 +100,5 @@ rather than restating them.
   (MLflow/W&B) or production model/data-drift monitoring yet — both are future work.
 - **`top_k` is fixed at 5.** The API request has no `top_k` field and the route hardcodes
   Top-5; clients that send `top_k` are ignored (see [api-spec.md](api-spec.md)).
-- **Retrieval latency dominates** (~1.1s of ~1.4s), most of it query encoding. The vector
-  index is HNSW over a `halfvec(1024)` column; further `ef_search` / quantization tuning is
-  possible future work.
+- **Query encoding dominates retrieval** (~1.6s on free CPU). The vector index is an
+  in-memory FAISS HNSW (`ANN_EF_SEARCH`, default 100); ONNX/int8 query encoding is future work.

@@ -1,10 +1,11 @@
 """
 Compute BGE-M3 embeddings for all products in PostgreSQL and write them back.
 
-Run locally with Cloud SQL Proxy, or in Colab with a GPU:
+Run against local docker-compose Postgres or Supabase (session pooler), or use
+ml/notebooks/embed_products_supabase.ipynb on a Colab GPU:
 
     python -m ml.scripts.embed_products \
-        --database-url=postgresql://postgres:PASSWORD@localhost:5433/chatbeauty \
+        --database-url=postgresql://chatbeauty:chatbeauty@localhost:5432/chatbeauty \
         --model-path=ml/model/retrieval/bge-m3-finetuned-20260202-120852 \
         --batch-size=256
 """
@@ -81,9 +82,10 @@ def main():
     cur.close()
     conn.close()
     logger.info(f"Done. Embedded {len(asins)} products.")
-    logger.info("Now create the HNSW index in Cloud SQL Studio:")
-    logger.info("  CREATE INDEX idx_products_embedding ON products")
-    logger.info("  USING hnsw (embedding halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);")
+    logger.info(
+        "Next: rebuild the in-memory FAISS HNSW index from these embeddings and "
+        "upload it to the HF Hub model repo (deploy/hf-space/DEPLOY.md, Phase B)."
+    )
 
 
 if __name__ == "__main__":

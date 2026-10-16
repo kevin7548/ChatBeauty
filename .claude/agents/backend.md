@@ -19,14 +19,14 @@ backend/app/
 ```
 
 ## Pipeline (per request)
-1. **Retrieval**: encode user scenario with fine-tuned BGE-M3 → Top-100 candidates via pgvector HNSW cosine similarity (~1,100ms)
-2. **Reranking**: LightGBM (LambdaRank) with 10 metadata features → Top-5 (~19ms)
-3. **Explanation**: Gemini 2.5 Flash generates all 5 explanations in a single API call (~250ms)
+1. **Retrieval**: encode user scenario with fine-tuned BGE-M3 → Top-100 candidates via an in-memory FAISS HNSW index (cosine), then metadata from Postgres (~1,600ms on free CPU)
+2. **Reranking**: LightGBM (LambdaRank) with 10 metadata features → Top-5 (~850ms, mostly the DB feature lookup)
+3. **Explanation**: Gemini 2.5 Flash generates all 5 explanations in a single API call (~2,400ms, thinking disabled)
 
 ## Key behaviors
-- Total latency target: ~1,400ms
+- Typical total latency: ~4,800ms on the free-tier HF Space CPU
 - All 5 explanations are generated in one Gemini API call to minimize latency
-- BGE-M3 model and LightGBM pickle are loaded from the local `ml/model/` mount
+- BGE-M3 model, FAISS index, and LightGBM pickle are loaded at import time from `ml/model/` (HF Hub download on the Space)
 - Middleware logs per-request latency
 
 ## Constraints

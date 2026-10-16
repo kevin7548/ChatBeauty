@@ -4,7 +4,7 @@ FastAPI service that serves the recommendation pipeline. Code lives in `backend/
 For the request/response contract see [api-spec.md](api-spec.md); for the data model see
 [db-schema.md](db-schema.md); for the system picture see [architecture.md](architecture.md).
 
-> No automated tests exist yet. See
+> Tests: `backend/tests/` (offline `POST /recommend` integration test, run in CI). See
 > [Known limitations](architecture.md#known-limitations--future-work).
 
 ## Layout

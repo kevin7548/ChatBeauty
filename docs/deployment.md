@@ -58,10 +58,11 @@ the index whenever embeddings change.
 The container (`backend/Dockerfile`, `python:3.12-slim`) is unchanged; what changed is **where
 the models come from and where it runs**.
 
-- **Models:** load from the local `ml/model/` directory (mounted by docker-compose at
-  `/app/ml/model-gcs/`), **not** a GCS volume. The fine-tuned BGE-M3
-  (`retrieval/bge-m3-finetuned-20260202-120852/`) and the LightGBM
-  `reranking/lgbm_reranker_current_features_v1.pkl` already live there.
+- **Models:** load from the local `ml/model/` directory (mounted read-only by docker-compose at
+  `/app/ml/model/`, the backend's default paths). It holds the fine-tuned BGE-M3
+  (`retrieval/bge-m3-finetuned-20260202-120852/`), the FAISS index (`retrieval/ann/`), and the
+  LightGBM `reranking/lgbm_reranker_current_features_v1.pkl` — the same layout as the HF Hub
+  model repo the Space downloads at boot.
 - **Local (primary, simplest $0):** `cd backend && docker-compose up --build -d` → backend on
   `:8080`. Models load from `ml/model/`; point `DATABASE_URL` at Supabase. For a one-off public
   demo, expose it with a tunnel (`cloudflared` / `ngrok`).
@@ -131,16 +132,30 @@ only piece of the pipeline that was always free and stays unchanged.
 
 ---
 
+## History — how the deployment got here
+
+1. **Paid GCP (until 2026-06-02):** Vercel → Cloud Run → Cloud SQL (Postgres + pgvector), models
+   on a GCS volume. Worked, but billed 24/7 (details below).
+2. **Free-tier re-platform (2026-06-02 → 06-07):** all GCP resources deleted; DB moved to Supabase,
+   backend to a Hugging Face Docker Space, models to the HF Hub.
+3. **pgvector → in-memory FAISS (2026-06-07):** a pgvector HNSW index over 112K `halfvec(1024)`
+   rows doesn't fit Supabase's 500 MB cap, and an exact scan took ~40 s/query, so vector search
+   moved in-process (FAISS HNSW shipped next to the models). Postgres now serves only metadata
+   and reranking features.
+4. **Repo cleanup (2026-10):** the GCP leftovers (`deploy/setup-gcp.sh`, `backend/.gcloudignore`,
+   the Cloud SQL Colab notebook, `ml/model-gcs/` default paths) were removed. The script is
+   still in git history: `git show e7cb606:deploy/setup-gcp.sh`.
+
 <details>
-<summary>Historical reference — the retired paid GCP deployment (pre-2026-06-02)</summary>
+<summary>Reference — the retired paid GCP deployment (pre-2026-06-02)</summary>
 
 > Kept for reference only. These resources were **deleted on 2026-06-02**; do not recreate them
-> without an explicit decision to spend money. Reference script: `deploy/setup-gcp.sh`.
+> without an explicit decision to spend money.
 
 **Topology:** Vercel SPA → Cloud Run (FastAPI) → Cloud SQL (Postgres+pgvector), GCS volume
 (BGE-M3 + LightGBM, mounted read-only at `/app/ml/model-gcs/`), Gemini 2.5 Flash.
 
-**Cloud Run (`deploy/setup-gcp.sh`):** enable APIs → create Artifact Registry (`asia-northeast3`)
+**Cloud Run (former `deploy/setup-gcp.sh`):** enable APIs → create Artifact Registry (`asia-northeast3`)
 → build via Cloud Build (`gcloud builds submit`, no local Docker) → `gcloud run deploy`. Key
 flags: `--memory 4Gi --cpu 2`, `--min-instances 1 --max-instances 2` (min 1 prevented cold
 starts — and was a constant always-on cost), `--timeout 300`, `--allow-unauthenticated`,

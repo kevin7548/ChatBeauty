@@ -28,7 +28,7 @@ app/
 - Keep all 5 explanations in **one** Gemini call (latency).
 - Embedding dim must stay **1024** (matches the `halfvec(1024)` column).
 - BGE-M3 model + LightGBM pickle load at startup from the local **`ml/model/` mount**
-  (docker-compose `/app/ml/model-gcs/`), not the image.
+  (docker-compose `/app/ml/model/`), not the image.
 - `RecommendRequest` has only `user_input`; don't assume `top_k` is honored.
 
 ## Docs

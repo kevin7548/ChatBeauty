@@ -30,8 +30,8 @@ React + TypeScript  ──API──→  FastAPI: local docker-compose
   points at the Supabase pooler URL; or local docker-compose Postgres for dev.
 - **Backend:** primary = local `docker-compose up` (`:8080`). Optional free host
   (Render / Fly.io / HF Spaces) — these idle-spin-down (cold start on first request).
-- **Models:** load from local `ml/model/` (docker-compose mounts it at `/app/ml/model-gcs/`),
-  **not** a GCS volume. ~2.1 GB BGE-M3 + the LightGBM pkl.
+- **Models:** load from local `ml/model/` (docker-compose mounts it read-only at `/app/ml/model/`),
+  **not** a GCS volume. ~2.1 GB BGE-M3 + FAISS index (`retrieval/ann/`) + the LightGBM pkl.
 - **Gemini:** Google AI Studio **free-tier** key (`GEMINI_API_KEY`), not paid Vertex AI.
 - **Dockerfile:** build context is project root (`..`) — COPY paths reference `backend/` and `ml/`.
 - **Vercel:** static hosting, `VITE_API_URL` env var for the backend URL.
