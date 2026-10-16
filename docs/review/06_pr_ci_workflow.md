@@ -144,7 +144,7 @@ PR #14에서 실제로 뜬 체크 3개:
 절차 ([development.md](../development.md)):
 
 ```bash
-huggingface-cli download kevin7548/chatbeauty-models --local-dir ml/model   # 모델 + FAISS 인덱스 (~2.6GB)
+hf download kevin7548/chatbeauty-models --local-dir ml/model   # 모델 + FAISS 인덱스 (~2.6GB)
 cd backend && cp .env.example .env    # GEMINI_API_KEY 입력
 docker compose up --build
 curl http://localhost:8080/health

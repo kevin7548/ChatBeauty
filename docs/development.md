@@ -12,7 +12,7 @@ End-to-end local setup for the whole stack. Layers: [backend](backend-architectu
   (`kevin7548/chatbeauty-models`, same layout); pull whatever is missing locally:
 
   ```bash
-  huggingface-cli download kevin7548/chatbeauty-models --local-dir ml/model
+  hf download kevin7548/chatbeauty-models --local-dir ml/model
   ```
 
 ## 1. Backend + database (Docker)
