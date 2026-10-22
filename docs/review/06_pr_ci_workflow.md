@@ -93,6 +93,43 @@ PR #14에서 실제로 뜬 체크 3개:
 - 라우트(`api/routes/recommend.py`)는 진짜라서, **retrieve → rerank → explain을 엮는 코드와 응답 형식**은 검증됩니다.
 - 덕분에 torch 같은 무거운 의존성 없이 약 20~40초에 끝납니다.
 
+#### 파일 연결 구조
+
+```mermaid
+flowchart TB
+    CI["GitHub Actions CI<br/>같은 명령을 실행"] --> PY["python -m pytest<br/>pyproject의 testpaths 읽음"]
+    PY --> CF["tests/conftest.py<br/>가짜 서비스 설치 + client 제공"]
+    CF --> TR["tests/test_recommend.py<br/>테스트 3개, /recommend 호출"]
+    TR -- "client.post (TestClient)" --> MAIN["app/main.py<br/>진짜 FastAPI 앱"]
+    MAIN --> RT["api/routes/recommend.py<br/>진짜 조립 코드 (3단계 호출)"]
+    RT --> STUB["가짜 서비스 (stub)<br/>고정 데이터, 모델·DB 없음"]
+    CF -. "앱 import 전에<br/>sys.modules에 먼저 넣음" .-> STUB
+    REAL["진짜 서비스 (안 불림)<br/>BGE-M3 · FAISS · DB · Gemini"]
+    RT ~~~ REAL
+
+    classDef test fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef app fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef stub fill:#FAECE7,stroke:#993C1D,color:#712B13
+    classDef off fill:#F1EFE8,stroke:#888780,color:#444441,stroke-dasharray:4 4
+    class CF,TR test
+    class MAIN,RT app
+    class STUB stub
+    class REAL off
+```
+
+보라는 테스트 코드, 청록은 진짜 앱 코드, 주황은 가짜 서비스입니다.
+
+**실행 순서**
+
+1. **테스트 찾기:** `pytest`가 `pyproject.toml`의 `testpaths = ["tests"]` 설정을 보고 `tests/` 폴더를 찾습니다.
+2. **`conftest.py`가 가장 먼저 실행됩니다.** `_install_service_stubs()`가 서비스 모듈 4개(`retrieval`, `reranking`, `explanation`, `retrieval_resources`)를 가짜로 만들어 `sys.modules`에 넣습니다. `sys.modules`는 파이썬이 "이미 불러온 모듈"을 기억하는 목록이라, 여기에 가짜가 먼저 있으면 나중에 누가 import해도 진짜 파일을 열지 않습니다.
+3. **각 테스트가 `client` fixture를 받습니다.** fixture는 테스트에 미리 준비해 주는 값입니다. 이 시점에 `app.main`을 import하고, 서버를 띄우지 않고도 앱을 부를 수 있는 `TestClient`로 감쌉니다.
+4. **앱 코드는 진짜, 서비스만 가짜:** `client.post("/recommend")`를 부르면 진짜 `main.py`와 route가 실행됩니다. route가 import한 서비스 함수는 2번의 가짜입니다.
+   - 가짜 검색은 상품 100개를 고정해서 돌려줍니다.
+   - 가짜 리랭커는 앞에서 5개를 자릅니다.
+   - 가짜 설명은 `"추천 이유 {item_id}"`를 돌려줍니다.
+5. **확인:** 응답을 assert로 검사합니다(위 "테스트가 실제로 확인하는 것").
+
 ### 그래서 CI가 **확인하지 않는** 것
 
 | 확인 안 됨 | 예시 |
