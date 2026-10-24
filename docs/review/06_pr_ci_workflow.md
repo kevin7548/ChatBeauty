@@ -191,6 +191,20 @@ curl -X POST http://localhost:8080/recommend -H "Content-Type: application/json"
 
 주의: compose의 `db`는 빈 로컬 Postgres입니다. 상품 데이터가 없으면 FAISS가 찾은 ASIN을 DB에서 못 찾아 추천이 비어 나옵니다. 실제 결과를 보려면 Beam으로 로컬 DB를 채우거나, `docker-compose.yml`의 `environment: DATABASE_URL`을 Supabase URL로 바꿔야 합니다. compose의 `environment` 값이 `.env`보다 우선하므로 `.env`만 고쳐서는 안 바뀝니다. 그래도 `/health` 응답과 서버 기동 자체는 빈 DB로도 확인됩니다(이번 확인의 핵심).
 
+### 실제로 한 확인 (2026-10-16)
+
+Mac에 Docker가 설치되어 있지 않아서(Docker Desktop이 삭제된 상태) compose 대신 **같은 코드를 uvicorn으로 직접 실행**했습니다. 세 가지 실행 방식의 차이는 [07 §3](07_runtime_environments.md)에 정리했습니다.
+
+| 확인 항목 | 결과 |
+|---|---|
+| 서버 기동 | ✅ BGE-M3, FAISS 인덱스, LightGBM 모두 `ml/model/`에서 로드 |
+| `.env`를 라우트 import 전에 읽는가 | ✅ `DATABASE_URL`을 `.env`에만 두었는데 Supabase에 접속함 (수정 전이면 `localhost`로 가서 기동 실패) |
+| `GET /health` | ✅ `200 {"status":"ok"}` |
+| `POST /recommend` "수분 크림 추천해줘" | ✅ 5개 + 한국어 설명 (retrieval 1.5s, rerank 0.87s, explanation 3.2s, 합계 약 5.6s) |
+| compose 볼륨 마운트, 컨테이너 안의 기본 경로 | ❌ 확인 못 함 (Docker 필요) |
+
+로컬에서 LightGBM을 돌리려면 `libomp`가 필요합니다. 설치되어 있지 않아서 이번에는 PyTorch에 들어 있는 사본을 그 프로세스에만 지정했습니다(`DYLD_LIBRARY_PATH=<venv>/site-packages/torch/lib`). 자주 쓸 거면 `brew install libomp`가 간단합니다.
+
 ---
 
 ## 6. 이 레포의 다른 workflow: keepalive
