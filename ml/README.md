@@ -15,6 +15,9 @@ ml/
 │                    #   → PostgreSQL (products) + training_pairs.jsonl   (see pipeline/CLAUDE.md)
 ├── item_ranker/     # LightGBM LambdaRank reranking library — installed via `pip install -e ml/`
 │                    #   and imported by backend/app at serve time       (see item_ranker/CLAUDE.md)
+├── preprocess/      # extract_keywords.py (Llama 3.1 8B via vLLM) → split_keywords.py (timestamp split)
+├── retrieval/       # create_training_pairs.py → finetune_bge_m3.py (the served model's recipe)
+├── evaluation/      # retrieve_candidates.py (FAISS) → evaluate_recall.py (Recall@K, MRR)
 ├── scripts/         # embed_products.py — compute BGE-M3 embeddings → PostgreSQL
 ├── notebooks/       # Colab (GPU): embed_products_supabase.ipynb (Supabase + model from HF Hub)
 ├── model/           # trained artifacts (not in git; kept locally + on the HF Hub)
@@ -34,10 +37,25 @@ ml/
      --database-url="$DATABASE_URL" [--skip-training-pairs]
    ```
    Populates the `products` table (112,578 rows + the 9 stored reranking features) and — unless
-   `--skip-training-pairs` — emits `training_pairs.jsonl` (~1M pairs). Use `--skip-training-pairs`
+   `--skip-training-pairs` — emits `training_pairs.jsonl` (~518K keyword-query pairs). Use `--skip-training-pairs`
    for a memory-light products-only load (the pairs branch OOMs ~16 GB).
-2. **Fine-tune BGE-M3** on the pairs (MultipleNegativesRankingLoss, ~1M pairs, 2 epochs, dim 1024).
-   Artifact → `model/retrieval/bge-m3-finetuned-<timestamp>/`. (Done offline; details in the docs.)
+2. **Fine-tune BGE-M3** (MultipleNegativesRankingLoss, 2 epochs, batch 32, dim 1024). The served
+   model was trained on `retrieval/create_training_pairs.py QUERY_TYPE=both` (keyword + raw-review
+   queries, 1,006,278 pairs; `finetune_bge_m3.py` holds out 10% → 905,650), not on the Beam pairs
+   (keyword queries only, ~518K):
+   ```bash
+   python ml/preprocess/extract_keywords.py            # GPU; → keywords_output.jsonl
+   python ml/preprocess/split_keywords.py              # → keywords_{train,valid,test}.jsonl
+   python ml/retrieval/create_training_pairs.py QUERY_TYPE=both
+   python ml/retrieval/finetune_bge_m3.py EPOCHS=2 BATCH_SIZE=32
+   ```
+   Artifact → `model/retrieval/bge-m3-finetuned-<timestamp>/`.
+   **Evaluate** (Valid Recall@100 0.3543 reproduces from `data/evaluation/retrieval_candidates_valid.jsonl`):
+   ```bash
+   python ml/evaluation/retrieve_candidates.py SPLIT=valid                               # serving HNSW index
+   python ml/evaluation/retrieve_candidates.py MODEL_PATH=BAAI/bge-m3 INDEX=flat SPLIT=valid  # any other model
+   python ml/evaluation/evaluate_recall.py SPLIT=valid TAG=<tag printed above>
+   ```
 3. **Embeddings:** run `notebooks/embed_products_supabase.ipynb` on a Colab GPU — loads the
    fine-tuned model from the HF Hub and writes `halfvec` embeddings to Postgres (~15–30 min).
 4. **Reranker:** train LightGBM (`item_ranker/modeling/train/`) on retrieval candidates (10 features).
