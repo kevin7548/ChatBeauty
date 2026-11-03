@@ -4,7 +4,7 @@ Offline ML layer: Apache Beam data pipeline, BGE-M3 fine-tuning (retrieval), Lig
 
 ## Three components
 - **Retrieval** — `BAAI/bge-m3` fine-tuned (MultipleNegativesRankingLoss, ~1M pairs, dim 1024).
-  Embeddings computed by `scripts/embed_products.py` → PostgreSQL. Valid Recall@100 0.3543.
+  Embeddings computed by `scripts/embed_products.py` → PostgreSQL. Valid Recall@100 0.334 (leak-free, exact search; old 0.3543 was leaky — see `experiments/B/RESULTS.md`).
 - **Reranking** — `item_ranker/` LightGBM LambdaRank over 10 features. NDCG@5 0.3655.
 - **Pipeline** — `pipeline/` Apache Beam (DirectRunner), offline.
 

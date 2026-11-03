@@ -139,8 +139,10 @@ Raw review text as query, item's `embedding_text` as positive
 | Epochs | 2 |
 | Batch Size | 32 |
 | Embedding Dim | 1024 |
-| **Valid Recall@100** | 0.2015 → **0.3543** |
-| **Test Recall@100** | **0.3728** |
+| **Valid Recall@100** | 0.176 (zero-shot) → **0.334** |
+| **Test Recall@100** | 0.176 (zero-shot) → **0.341** |
+
+> Measured 2026-10-25 (valid) and 2026-11-03 (test) under identical conditions (exact search, current corpus, 62,669 queries each) — see `experiments/B/RESULTS.md`. The earlier figures (0.2015 → 0.3543, Test 0.3728) came from a ChromaDB-era index whose item text likely included review keywords from the valid/test period, so they are no longer used.
 
 **Fine-tuning Approach B — Generated Query (experimental)**
 

@@ -50,7 +50,9 @@ ml/
    python ml/retrieval/finetune_bge_m3.py EPOCHS=2 BATCH_SIZE=32
    ```
    Artifact → `model/retrieval/bge-m3-finetuned-<timestamp>/`.
-   **Evaluate** (Valid Recall@100 0.3543 reproduces from `data/evaluation/retrieval_candidates_valid.jsonl`):
+   **Evaluate** (leak-free baseline: Valid Recall@100 **0.334** with `INDEX=flat` and the fine-tuned model, see
+   `experiments/B/RESULTS.md`. The old `data/evaluation/retrieval_candidates_valid.jsonl` scores 0.3543 but comes
+   from a ChromaDB-era index that likely leaked valid/test review keywords; don't use it as the baseline):
    ```bash
    python ml/evaluation/retrieve_candidates.py SPLIT=valid                               # serving HNSW index
    python ml/evaluation/retrieve_candidates.py MODEL_PATH=BAAI/bge-m3 INDEX=flat SPLIT=valid  # any other model
@@ -64,7 +66,8 @@ ml/
 
 ## Models & metrics
 
-- **Retrieval** — `BAAI/bge-m3` fine-tuned: **Valid Recall@100 0.2015 → 0.3543**, Test 0.3728.
+- **Retrieval** — `BAAI/bge-m3` fine-tuned: **Valid Recall@100 0.176 (zero-shot) → 0.334**, Test 0.176 → 0.341 (exact search, current corpus).
+  Older 0.2015 → 0.3543 / Test 0.3728 are leaky ChromaDB-era values.
 - **Reranking** — LightGBM LambdaRank over 10 features (36.4M candidate rows):
   **NDCG@5 0.3655**, NDCG@10 0.4015.
 
