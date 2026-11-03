@@ -1,0 +1,77 @@
+{
+  "split": "test (eval split: reviews >= 20 chars, timestamp 80/10/10)",
+  "n_queries": 62669,
+  "n_items": 112589,
+  "gt_in_corpus": 62668,
+  "sources": {
+    "S1": {
+      "desc": "fine-tuned BGE-M3 (flat)",
+      "recall@10": 0.1548133846080199,
+      "recall@50": 0.2739791603504125,
+      "recall@100": 0.3414766471461169,
+      "mrr@100": 0.08786008034842792
+    },
+    "S2": {
+      "desc": "zero-shot BAAI/bge-m3 (flat)",
+      "recall@10": 0.07986404761524837,
+      "recall@50": 0.1397182019818411,
+      "recall@100": 0.17600408495428363,
+      "mrr@100": 0.047762674885408744
+    },
+    "S3": {
+      "desc": "BM25 (title + raw description + features + categories + raw train-period reviews)",
+      "recall@10": 0.1213837782635753,
+      "recall@50": 0.19199285133000368,
+      "recall@100": 0.2286457419138649,
+      "mrr@100": 0.07302224366412727
+    }
+  },
+  "runs": {
+    "S1": {
+      "source": "S1",
+      "model_path": "/root/.cache/huggingface/hub/models--kevin7548--chatbeauty-models/snapshots/121f36b93250dd5eaf538246eb23671c4e01f83f/retrieval/bge-m3-finetuned-20260202-120852",
+      "device": "cuda",
+      "fp16": true,
+      "max_seq_length": 512,
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "items": 749.4,
+        "queries": 166.1,
+        "search": 5.3
+      },
+      "recall@100": 0.3414766471461169,
+      "gt_in_corpus": 62668
+    },
+    "S2": {
+      "source": "S2",
+      "model_path": "BAAI/bge-m3",
+      "device": "cuda",
+      "fp16": true,
+      "max_seq_length": 512,
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "items": 740.1,
+        "queries": 167.3,
+        "search": 5.4
+      },
+      "recall@100": 0.17600408495428363,
+      "gt_in_corpus": 62668
+    },
+    "S3": {
+      "source": "S3",
+      "fields": "tdcr",
+      "max_reviews": null,
+      "description": "raw",
+      "bm25": "bm25s Lucene k1=1.5 b=0.75, en stopwords, Snowball english stemmer",
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "index": 11.7,
+        "search": 51.3
+      },
+      "recall@100": 0.2286457419138649
+    }
+  }
+}

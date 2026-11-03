@@ -1,0 +1,56 @@
+{
+  "question": "Why does S1 flat (0.3344) differ from B0 (0.3543, ChromaDB-era retrieval_candidates_valid.jsonl)?",
+  "sample": "every 50th valid query (1,200 queries), same fine-tuned model",
+  "fp16_vs_fp32_item_cosine_2000_items": {
+    "min": 0.99963,
+    "mean": 1.000023
+  },
+  "mean_top100_overlap_B0_vs_S1": 0.8818,
+  "shared_pairs": 105818,
+  "score_diff_B0_minus_S1": {
+    "median": 0.0,
+    "p5": -0.0011,
+    "p95": 0.0006,
+    "share_abs_lt_0.005": 0.942
+  },
+  "B0_only_candidates": {
+    "score_above_S1_100th": 4953,
+    "score_below_S1_100th": 9229
+  },
+  "recent_0.3543_rerun": "2026-10-23 session 16399dbd: `evaluate_recall.py SPLIT=valid` re-scored the 2026-03-22 ChromaDB-era candidate file; no new retrieval was run.",
+  "ruled_out": {
+    "fp16": "fp32 re-encoding (local MPS) of 150 B0-hit/S1-miss pairs gives gt scores 0.13 below B0 (median), same as fp16",
+    "HNSW_vs_flat": "approximate search cannot raise recall over exact search on the same vectors",
+    "truncation_512": "gt items >512 tokens: B0 0.586 vs S1 0.590 (no gap)",
+    "model_or_query_encoding": "89% of pairs where both hit reproduce B0 scores within 0.01 using the current text"
+  },
+  "where_the_gap_is": {
+    "gt_review_keywords_empty (48.1% of queries)": {
+      "B0": 0.3182,
+      "S1": 0.2719
+    },
+    "gt_review_keywords_present (51.9%)": {
+      "B0": 0.3877,
+      "S1": 0.3923
+    }
+  },
+  "text_reconstruction_150_B0hit_S1miss_pairs": {
+    "current text": {
+      "median_score_minus_B0": -0.1306,
+      "share_within_0.01": 0.09
+    },
+    "+ train-split keywords": {
+      "median_score_minus_B0": -0.0345,
+      "share_within_0.01": 0.22
+    },
+    "+ train/valid/test keywords": {
+      "median_score_minus_B0": -0.0035,
+      "share_within_0.01": 0.17
+    },
+    "+ only the query review keywords": {
+      "median_score_minus_B0": 0.1581,
+      "share_within_0.01": 0.07
+    }
+  },
+  "conclusion": "The 0.020 gap comes from item text, not search method or precision. B0 scored ground-truth items much higher only where the current item has no review keywords; adding the items valid/test-period review keywords reproduces B0 scores on median, train-only keywords do not. Most likely the ChromaDB index was built from an earlier items file whose review keywords included valid/test-period reviews, so 0.3543 is likely inflated by leakage. Not proven exactly: keyword order/format of the old file cannot be reproduced."
+}
