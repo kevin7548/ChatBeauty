@@ -1,0 +1,1231 @@
+{
+  "note": "Eval split is per review, so \"0 train reviews\" is rare; report as low-review products, not cold-start. Train review counts come from the eval split train 80%.",
+  "recall@100_by_train_reviews": {
+    "0": {
+      "n_queries": 34463,
+      "share_of_queries": 0.5499210135792816,
+      "S1": 0.29361924382671273,
+      "S2": 0.12648347503119287,
+      "S3": 0.08121753764907291,
+      "S1∪S2∪S3": 0.32408670168006265
+    },
+    "1-4": {
+      "n_queries": 6908,
+      "share_of_queries": 0.11022993824698017,
+      "S1": 0.18268674001158078,
+      "S2": 0.160828025477707,
+      "S3": 0.14171974522292993,
+      "S1∪S2∪S3": 0.2957440648523451
+    },
+    "5-19": {
+      "n_queries": 7442,
+      "share_of_queries": 0.11875089757296271,
+      "S1": 0.4223327062617576,
+      "S2": 0.26041386723998927,
+      "S3": 0.3587745229776942,
+      "S1∪S2∪S3": 0.5356087073367375
+    },
+    "20+": {
+      "n_queries": 13856,
+      "share_of_queries": 0.2210981506007755,
+      "S1": 0.4962471131639723,
+      "S2": 0.26140300230946883,
+      "S3": 0.5687788683602771,
+      "S1∪S2∪S3": 0.6550952655889145
+    }
+  },
+  "all_s1_misses": {
+    "n_s1_misses": 41268,
+    "query_over_512_tokens": {
+      "misses": 0.0005088688572259378,
+      "hits": 0.0043457943925233646
+    },
+    "median_query_tokens": {
+      "misses": 27.0,
+      "hits": 50.0
+    },
+    "gt_zero_train_reviews": {
+      "misses": 0.5898759329262383,
+      "hits": 0.47285046728971963
+    },
+    "rescued_by_other_sources": {
+      "S2": 0.044247358728312494,
+      "S3": 0.09256566831443248
+    },
+    "rescued_by_any_other": 0.11813027042744983,
+    "s1_rank_of_missed_gt": {
+      "median": 1536.0,
+      "share_101_200": 0.11602209944751381,
+      "share_101_500": 0.28627507996510615
+    }
+  },
+  "sample": {
+    "seed": 42,
+    "n": 50,
+    "type_counts": null,
+    "cases": [
+      {
+        "query_idx": 4065,
+        "query": "Boyfriend liked it said bristles will soften after use",
+        "query_chars": 54,
+        "query_tokens": 15,
+        "gt": {
+          "asin": "B096TFX1S2",
+          "title": "BFWood",
+          "store": "BFWood",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 14,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 4650,
+          "S2": 97834,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.6142578125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 4320,
+        "query": "Actually bought it for my granddaughter who has dry hair. She absolutely loves it!<br />She made a point of also stating it smells amazing.",
+        "query_chars": 139,
+        "query_tokens": 38,
+        "gt": {
+          "asin": "B0BV1FPZY6",
+          "title": "SAUCE BEAUTY Guacamole Whip Hair Mask - Deep Conditioning Hair Mask for All Hair Types w/Avocado, Honey & Argan Oil - 12 Fl Oz Hair Mask for Dry, Damaged & Frizzy Hair (Guacamole)",
+          "store": "SAUCE BEAUTY",
+          "categories": [],
+          "train_reviews": 457,
+          "embedding_text_chars": 187,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 471,
+          "S2": 5430,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.62548828125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 5429,
+        "query": "These were pretty good. A few of them the ears came loose but there were so many that losing a few wasn't a big deal. Really cute and comfy.",
+        "query_chars": 140,
+        "query_tokens": 41,
+        "gt": {
+          "asin": "B0C54SD423",
+          "title": "SIQUK 26 Pieces Cat Ears Headband Sequin Ears Headbands Reversible Shiny Hairband for Women and Girls, 26 Colors",
+          "store": "SIQUK",
+          "categories": [],
+          "train_reviews": 22,
+          "embedding_text_chars": 1140,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 697,
+          "S2": 9089,
+          "S3": 10
+        },
+        "rescued_by": [
+          "S3"
+        ],
+        "S1_top1_score": 0.6279296875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 5642,
+        "query": "I really like these except some of the colors are a little weird. It’s not that big of a deal though, not really terribly noticeable",
+        "query_chars": 132,
+        "query_tokens": 34,
+        "gt": {
+          "asin": "B08L98XVQD",
+          "title": "Anime Make Up Brushes Set, 5pcs Cosmetic Kimetsu Cosplay Figure Metal Handle Makeup Brushes Set Gifts For Women Girls Fans (A)",
+          "store": "feimeng jewelry",
+          "categories": [],
+          "train_reviews": 6,
+          "embedding_text_chars": 551,
+          "n_review_keywords": 37
+        },
+        "rank": {
+          "S1": 22730,
+          "S2": 62156,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.54150390625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 5818,
+        "query": "Purchased this for my father who was using an older corded Norelco that had missing parts.  Seems to work just fine so far.<br /><br />3Months in and still working well.  Holds a charge for many weeks.  Great value for the money.",
+        "query_chars": 229,
+        "query_tokens": 62,
+        "gt": {
+          "asin": "B09HCC3P2Q",
+          "title": "Viatia Electric Shaver for Men, 2 in 1 Wet/Dry USB Rechargeable Men Electric Razor Cordless 3D Rotary Portable Shaver Waterproof Facial Shaver with Beard Sideburn Trimmer for Boyfriend, Dad, Husband",
+          "store": "Viatia",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 309,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 248,
+          "S2": 670,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.6923828125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 5956,
+        "query": "Wanted to dye hair.  I had to bleach then color. After bleaching there was a clear and identified strands and sections of hair that did not bleach.  This hair is a mixed blend not all human.",
+        "query_chars": 190,
+        "query_tokens": 51,
+        "gt": {
+          "asin": "B09L7JBNV9",
+          "title": "Brazilian Body Wave 3 Bundles with Closure(20 22 24+18,Bundles with Closure)100% Unprocessed Brazilian Body Wave Human Hair Weave with 4x4 Lace Closure Free Part Natural Color",
+          "store": "Kdmidun",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 183,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 469,
+          "S2": 4391,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.63818359375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 8093,
+        "query": "I don’t care for the sweet scent, like food",
+        "query_chars": 43,
+        "query_tokens": 15,
+        "gt": {
+          "asin": "B08W4PRK76",
+          "title": "Bath and Body Works Raspberry Jam Donut Ultra Shea Body Cream 8 Ounce Full Size",
+          "store": "Bath & Body Works",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 153,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 8189,
+          "S2": 32268,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5908203125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 10365,
+        "query": "Wig was not as pictured. The part you could not see cause it was nappy looking there. It was not a even a decent quality wig. Couldn't even fix it to be able to wear it. Money wasted.",
+        "query_chars": 183,
+        "query_tokens": 54,
+        "gt": {
+          "asin": "B098Q84C7P",
+          "title": "Youthfee Faux Locs Wigs for Black Women 15'' Ready-wear Synthetic Dreadlock Wigs Short Twist Wig with Curly Ends (Ombre Light Brown)",
+          "store": "Youthfee",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 140,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 3159,
+          "S2": 17816,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.654296875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 11437,
+        "query": "Replaces the worn micro-screen and blades for my razor. A perfect fit.",
+        "query_chars": 70,
+        "query_tokens": 24,
+        "gt": {
+          "asin": "B09B1LBFC2",
+          "title": "Premium Foil and Cutter Set for Remington SP-69 MS2-90, MS2-100, MS2-150, MS2-200",
+          "store": "Jamal",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 89,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 402,
+          "S2": 9672,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.68359375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 12593,
+        "query": "Plastic choices of brows all too large!",
+        "query_chars": 39,
+        "query_tokens": 13,
+        "gt": {
+          "asin": "B09JC33M22",
+          "title": "Eyebrow Stamp Stencil Kit Brow Stamp Brow Stamp Kit Waterproof Eyebrow Stamp Brow Stamp with 10 Reusable Eyebrow Stencils,Long-Lasting Hairline Shadow Stick(Light Brown)",
+          "store": "UIFME",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 177,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 321,
+          "S2": 14996,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.59130859375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 14196,
+        "query": "The wig is long and soft and big head friendly—worth the money.",
+        "query_chars": 63,
+        "query_tokens": 18,
+        "gt": {
+          "asin": "B09P81NR8W",
+          "title": "Olymei 38 \" Synthetic Curly Lace Front Wigs 6 Inch Middle Part Black Synthetic Deep Wave WIg for Black Women Replacement Hair Wig (Black)",
+          "store": "Olymei",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 145,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 959,
+          "S2": 52080,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.62548828125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 17287,
+        "query": "Great for my personal manicure kit. It easy for trips and very organized",
+        "query_chars": 72,
+        "query_tokens": 19,
+        "gt": {
+          "asin": "B08T1N9SX5",
+          "title": "Toenail Clippers Set, MOMSIV 10 pcs Professional Stainless Steel Pedicure Clippers Toenail Cutters, Super Sharp Men's Nail Clippers Toenail Clippers Set for Thickness & Ingrown Hard Toenails",
+          "store": "MOMSIV",
+          "categories": [],
+          "train_reviews": 5,
+          "embedding_text_chars": 1472,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 1062,
+          "S2": 1692,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.64990234375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 22093,
+        "query": "[[VIDEOID:10e40c610dafecc498df780f485265e2]] I’m so I love with these lashes !!! Order order order NOW!!!!!!!",
+        "query_chars": 109,
+        "query_tokens": 41,
+        "gt": {
+          "asin": "B09HGKY2C4",
+          "title": "JIMIRE False Eyelashes Fluffy Long Faux Mink Lashes Medium Volume Wispy Fake Lash Pack 7 Pairs",
+          "store": "JIMIRE",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 102,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 374,
+          "S2": 12803,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.63525390625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 23101,
+        "query": "Very good for your skin",
+        "query_chars": 23,
+        "query_tokens": 7,
+        "gt": {
+          "asin": "B0041E7S9C",
+          "title": "Glyderm Lotion Lite Plus 10% - 4 oz",
+          "store": "Gly Derm",
+          "categories": [],
+          "train_reviews": 9,
+          "embedding_text_chars": 1093,
+          "n_review_keywords": 71
+        },
+        "rank": {
+          "S1": 4921,
+          "S2": 9545,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.607421875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 25095,
+        "query": "The hair sheads a whole lot<br />Hard to maintain",
+        "query_chars": 49,
+        "query_tokens": 17,
+        "gt": {
+          "asin": "B09S5WVJG2",
+          "title": "Body Wave Lace Front Wig 13x4 Closure Wigs Human Hair Pre Plucked with Baby Hair 180 Density HD Lace Front Wigs Human Hair 22 Inch Frontal Human Hair Wigs for Black Women( 22 inch Body Wave Wig with Five gifts)",
+          "store": "QNQZ",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 218,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 6430,
+          "S2": 48296,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.52099609375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 26989,
+        "query": "Had a package of these in the hospital and was very impressed with the quality so I order them and they were nothing like what the hospital uses.  VERY, VERY thin and fall apart!",
+        "query_chars": 178,
+        "query_tokens": 43,
+        "gt": {
+          "asin": "B082VNJDXG",
+          "title": "Dawn Mist Baby Wipe Tub Aloe Unscented, BWU4340 - Pack of 80",
+          "store": "DawnMist",
+          "categories": [],
+          "train_reviews": 1,
+          "embedding_text_chars": 228,
+          "n_review_keywords": 9
+        },
+        "rank": {
+          "S1": 510,
+          "S2": 24335,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.53125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 27370,
+        "query": "Product is OK, but grossly overpriced. Also outside package was damaged.",
+        "query_chars": 72,
+        "query_tokens": 20,
+        "gt": {
+          "asin": "B07RZTYVBB",
+          "title": "Arm & Hammer Peroxicare Healthy Gums Toothpaste Twinpack, 6 Ounce, 2 Ea, 6 Ounce",
+          "store": "Arm & Hammer",
+          "categories": [],
+          "train_reviews": 2,
+          "embedding_text_chars": 345,
+          "n_review_keywords": 17
+        },
+        "rank": {
+          "S1": 44018,
+          "S2": 61683,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.4423828125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 27687,
+        "query": "After 40, my privates smell changed. Some days it smelled like my underarms. I was self conscious. Then I Google how to get rid of the odor and lume appeared. It worked so well and lasted in extra hot Temps. Fresh.",
+        "query_chars": 214,
+        "query_tokens": 58,
+        "gt": {
+          "asin": "B09NMD1MSM",
+          "title": "Lume Solid Deodorant Stick - Whole Body Deodorant - Aluminum-Free, Baking Soda-Free, Hypoallergenic, Safe For Sensitive Skin - 2.6 Ounce Solid Stick (Cucumber Melon)",
+          "store": "Lume",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 173,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 498,
+          "S2": 2945,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.61328125,
+        "S1_top1_same_store": true
+      },
+      {
+        "query_idx": 27848,
+        "query": "This is the only hair spray that I have found that hold my fine hair in place.",
+        "query_chars": 78,
+        "query_tokens": 20,
+        "gt": {
+          "asin": "B01IADYLTY",
+          "title": "John Frieda Frizz Ease Moisture Barrier Hairspray, Firm Hold 2 oz (Pack of 6)",
+          "store": "John Frieda",
+          "categories": [],
+          "train_reviews": 2,
+          "embedding_text_chars": 305,
+          "n_review_keywords": 18
+        },
+        "rank": {
+          "S1": 722,
+          "S2": 314,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.70361328125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 28142,
+        "query": "I wish the scent was a little stronger, but it controls body odor really well and doesn't leave any residue on my black clothing. My underarms are particularly sensitive and I have no issues with irritation. It also doesn't cause white heads or contribute towards ingrowns.",
+        "query_chars": 273,
+        "query_tokens": 67,
+        "gt": {
+          "asin": "B09NMDKNDS",
+          "title": "Lume Solid Deodorant Stick - Whole Body Deodorant - Aluminum-Free, Baking Soda-Free, Hypoallergenic, Safe For Sensitive Skin - 2.6 Ounce Solid Stick (Sandalwood Citrus)",
+          "store": "Lume",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 176,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 367,
+          "S2": 2425,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.6103515625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 28153,
+        "query": "[[VIDEOID:e1d6c0a0a64d4c9e65e3935cc4a56087]] The developer was empty when I received it I would like my money back",
+        "query_chars": 114,
+        "query_tokens": 45,
+        "gt": {
+          "asin": "B0B3LG9C8B",
+          "title": "Lash & Brow Color Kit, Professional Semi-Permanent Eyelash & Eyebrow 2-IN-1 Color Kit Long Lasting for 8 Weeks, Suitable for Salon & Home Use (Black)",
+          "store": "ICONSIGN",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 157,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 1047,
+          "S2": 101000,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.440673828125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 31333,
+        "query": "I don't need 12 blue hairties, lol, so I shared them with friends! What a inexpensive and thoughtful spontaneous gift.",
+        "query_chars": 118,
+        "query_tokens": 34,
+        "gt": {
+          "asin": "B08GP25YXJ",
+          "title": "Denim Fabric Hair Scrunchies for Women, Teens, Girls (Blue, 12 Pack)",
+          "store": "Glamlily",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 76,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 128,
+          "S2": 1013,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5751953125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 32090,
+        "query": "This perfume oil smells absolutely beautiful! It reminds me of Hypnotic Poison. It has a warm note that just wraps you up like a blanket of floral love!",
+        "query_chars": 152,
+        "query_tokens": 39,
+        "gt": {
+          "asin": "B00JTNBP94",
+          "title": "Pure Women's Perfume Fragrance Oil Roll on Premium Quality - Similar to Flowerbomb",
+          "store": "Designer Body Oils",
+          "categories": [],
+          "train_reviews": 1,
+          "embedding_text_chars": 242,
+          "n_review_keywords": 10
+        },
+        "rank": {
+          "S1": 9667,
+          "S2": 93,
+          "S3": 0
+        },
+        "rescued_by": [
+          "S2"
+        ],
+        "S1_top1_score": 0.63037109375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 32937,
+        "query": "Not very strong scent. Smells kinda like oatmeal. Cleans and lathers nicely. The scent is just too disappointing to like it.",
+        "query_chars": 124,
+        "query_tokens": 40,
+        "gt": {
+          "asin": "B0B4XW2Z7M",
+          "title": "American Shaving Co Beard Wash with Sandalwood Scent, Jojoba Oil & Argan Oil, Soothing & Moisturizing Beard Care For All Types of Skin & Beard Hair, Softens and soothes the Beard itches, A Sandalwood scent infused Natural Beard Cream, 8 Oz",
+          "store": "American Shaving Co.",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 247,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 1128,
+          "S2": 5088,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5888671875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 34167,
+        "query": "I've used these for years. Not for tender skin. Will exfoliate and lasts for weeks.",
+        "query_chars": 83,
+        "query_tokens": 25,
+        "gt": {
+          "asin": "B085BB7B1M",
+          "title": "Salux Nylon Japanese Beauty Skin Bath Wash Cloth/towel (3) Blue Yellow and Pink",
+          "store": "SALUX",
+          "categories": [],
+          "train_reviews": 1638,
+          "embedding_text_chars": 380,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 198,
+          "S2": 32486,
+          "S3": 28
+        },
+        "rescued_by": [
+          "S3"
+        ],
+        "S1_top1_score": 0.60498046875,
+        "S1_top1_same_store": true
+      },
+      {
+        "query_idx": 34736,
+        "query": "I use this as an old-fashioned mosquito repellent.  Very satisfied!",
+        "query_chars": 67,
+        "query_tokens": 21,
+        "gt": {
+          "asin": "B00KJS7M04",
+          "title": "Avon Sss Original Oil 16.9oz by Avon [Beauty]",
+          "store": "AVON",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 53,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 16897,
+          "S2": 89503,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.54833984375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 39533,
+        "query": "It didn't fit. It was too loose. Couldn't adjust it more and kept falling so I gave up on it.",
+        "query_chars": 93,
+        "query_tokens": 32,
+        "gt": {
+          "asin": "B0B5KYFJ6S",
+          "title": "Mildiso Green Wigs for Women 14'' Short Green Wig St Patricks Day Cute Fashion Curly Wavy Synthetic Wigs for Party Costume Halooween M004G",
+          "store": "Mildiso",
+          "categories": [],
+          "train_reviews": 183,
+          "embedding_text_chars": 1616,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 1992,
+          "S2": 59297,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.533203125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 40285,
+        "query": "I found this when searching for a brush specifically for short-hair dogs. I used it on my Frenchie and it didn’t work AT ALL. It didn’t remove a single hair. I could see a couple of loose hairs on his back, ran this brush over them a few times, and it still didn’t grab them. Such a disappointment.<br />The only reason I gave it 3 stars instead of 1 is because I liked to 2 bonus items that came with it- a light for his collar (to see him at night when camping, etc.), and a mini leash thing to clip him into his car seat or any seat belt. That part is really helpful because it’s long enough for him to sit up and move a little but not too much to move around the car. It’s really nice because I can use it in any car or with the little ‘doggy seat’ we bought him for our car.<br />So the brush was a bust but the two other things are awesome!",
+        "query_chars": 846,
+        "query_tokens": 225,
+        "gt": {
+          "asin": "B09ZL8TBDB",
+          "title": "ZRKFSR Pet Grooming Tool，2 Sided Undercoat Rake for Dogs &Cats，Deshedding Tool Great for Short to Long Hair Cats &Large Small Dogs，Safe and Effective Dematting Comb for Mats &Tangles Removing (Blue)",
+          "store": "ZRKFSR",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 206,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 314,
+          "S2": 2025,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.66162109375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 40927,
+        "query": "I love how they look full ,And soft and light as ever.",
+        "query_chars": 54,
+        "query_tokens": 17,
+        "gt": {
+          "asin": "B0932S53K1",
+          "title": "30 Pairs False Eyelashes 10 styles Natural Wispy Fake Eyelashes 16-20mm 3D Fluffy Crossed Faux Mink Lashes Pack Handmade Portable Individual Eyelashes Multipack Cat Eye&Round Shape by Boahankuke",
+          "store": "Boahankuke",
+          "categories": [],
+          "train_reviews": 1,
+          "embedding_text_chars": 347,
+          "n_review_keywords": 12
+        },
+        "rank": {
+          "S1": 2892,
+          "S2": 20781,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5546875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 42424,
+        "query": "Absolutely terrible.  As soon as you put it on . Instantly starts to peel from your face . Tried with make up. nope.. tried without make up ..nope.. just nope...<br />DO NOT BUY. DOESNT LAST 10 SECS ON SKIN.",
+        "query_chars": 207,
+        "query_tokens": 70,
+        "gt": {
+          "asin": "B0BDFKFWQF",
+          "title": "Halloween Mouth Tattoos Temporary for Clown Cosplay(10pcs)Tattoos Face stickers Prank Props for Cosplay Party Halloween Decorations Favor Supplies",
+          "store": "HCNOCNB",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 154,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 4285,
+          "S2": 78600,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.50244140625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 43605,
+        "query": "Awesome little comb that makes parting straight lines much easier",
+        "query_chars": 65,
+        "query_tokens": 14,
+        "gt": {
+          "asin": "B0B7DNFX1J",
+          "title": "LLTGMV Rat Tail Comb Steel Pin Rat Tail Carbon Fiber Heat Resistant Teasing Combs with Stainless Steel Pintail (Pink)",
+          "store": "LLTGMV",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 125,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 394,
+          "S2": 40008,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.56494140625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 43847,
+        "query": "Work for a few hours, scent is like old bamboo or rotten aloe. Smell and staying power is not impressive, so overall would not repurchase",
+        "query_chars": 137,
+        "query_tokens": 38,
+        "gt": {
+          "asin": "B00NQ2CCOQ",
+          "title": "Genuine Authentic German Nivea Deodorant Fresh Pure Aluminum Free 1.69 fl.oz/50ml",
+          "store": "NIVEA",
+          "categories": [],
+          "train_reviews": 196,
+          "embedding_text_chars": 9768,
+          "n_review_keywords": 739
+        },
+        "rank": {
+          "S1": 115,
+          "S2": 3911,
+          "S3": 33
+        },
+        "rescued_by": [
+          "S3"
+        ],
+        "S1_top1_score": 0.4736328125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 44959,
+        "query": "Goes great with every style",
+        "query_chars": 27,
+        "query_tokens": 8,
+        "gt": {
+          "asin": "B08TMRPK3L",
+          "title": "PLEELL 30 Pairs False Eyelashes 6 Styles Fluffy Volume Fake Lashes 15-20MM Long Faux 3D Dramatic Mink Lashes Pack",
+          "store": "Pleell",
+          "categories": [],
+          "train_reviews": 2,
+          "embedding_text_chars": 321,
+          "n_review_keywords": 15
+        },
+        "rank": {
+          "S1": 29133,
+          "S2": 36099,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.51708984375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 46111,
+        "query": "I like this product! Originally bought this for pigmentation turns out it worked for breakouts as well",
+        "query_chars": 102,
+        "query_tokens": 25,
+        "gt": {
+          "asin": "B09BRFYXDB",
+          "title": "AllWell Beauty Mask | Moisturizing Exfoliating Botanical Radiant Face and Body Mask | With Red Maple, Safflower, & Lavender | Made in the USA | Vegan, Cruelty-Free | 3.38 Fl. Oz.",
+          "store": "AllWell AllOver",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 186,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 10789,
+          "S2": 15566,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5107421875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 47568,
+        "query": "Not enough moisture for me. Will not reorder & do not recommend.",
+        "query_chars": 64,
+        "query_tokens": 18,
+        "gt": {
+          "asin": "B093ZNFPZZ",
+          "title": "HASK SHEA + COCOA BUTTER Body Wash- Moisturizing, vegan formula, hypoallergenic, dermatologist tested, pH balanced- 24.5 oz Bottle",
+          "store": "HASK",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 138,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 7209,
+          "S2": 22554,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.50439453125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 47734,
+        "query": "These are beautiful and do not stretch out and lose their shape. The colors are very rich in hue. I highly recommend!",
+        "query_chars": 117,
+        "query_tokens": 28,
+        "gt": {
+          "asin": "B096H8GKDW",
+          "title": "SILKIE x4 Set 100% Pure Mulberry Silk Pink Nude Neutral Skinny Scrunchies Travel Pouch Everyday Hair Ties Elastics Hair Care Ponytail Holder No Damage (Nudes)",
+          "store": "Silkie",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 1898,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 752,
+          "S2": 8501,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.56787109375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 48543,
+        "query": "Good value. New to wearing perfume and I wanted to find one that I liked and this was a good way to do so.",
+        "query_chars": 106,
+        "query_tokens": 29,
+        "gt": {
+          "asin": "B08MMYXYFJ",
+          "title": "Cologne 12 Piece Designer Fragrance Samples for Women",
+          "store": "Cologne",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 445,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 914,
+          "S2": 4238,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.51904296875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 48861,
+        "query": "I absolutely love this product. I use it as heat protectant before I blow out my hair. The smell is amazing and it works wonderfully. You can use it as many other things as well it is a 10 in one. I used it on vacation in Mexico and it helped a lot with frizziness!",
+        "query_chars": 265,
+        "query_tokens": 66,
+        "gt": {
+          "asin": "B095J1C66J",
+          "title": "Not Your Mother's All Eyes On Me 10-In-1 Hair Perfector (2-Pack) - 6 fl oz - Detangling Leave-In for All Types of Hair - Instantly Transforms Unmanageable Hair",
+          "store": "Not Your Mother's",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 1046,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 134,
+          "S2": 30,
+          "S3": 0
+        },
+        "rescued_by": [
+          "S2"
+        ],
+        "S1_top1_score": 0.6123046875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 49029,
+        "query": "For the stick we absolutely love!! The smell is amazing and it's gentle enough for all over use an my little girl!! As for the tube it smells like dirty feet or butt!! Yuck!!! I was really looking forward to this product",
+        "query_chars": 220,
+        "query_tokens": 55,
+        "gt": {
+          "asin": "B0B1LZ7ZSK",
+          "title": "Lume Deodorant Cream Tube and Solid Stick - Underarms and Private Parts - Aluminum Free, Baking Soda Free, Hypoallergenic, and Safe For Sensitive Skin - Travel Tube + Solid Stick Bundle (Warm Vanilla)",
+          "store": "Lume",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 208,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 128,
+          "S2": 241,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.51171875,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 49313,
+        "query": "Just do it. Love the colors and they feel great in your mouth.",
+        "query_chars": 62,
+        "query_tokens": 17,
+        "gt": {
+          "asin": "B092RDFCNY",
+          "title": "12 Pcs BPA-Free Soft Bristles Bamboo Eco-Friendly Toothbrush in Black & White.100% Natural, Biodegradable, Compostable & Organic Charcoal Adults Tooth Brush. Recyclable Sealed Pack.",
+          "store": "Circle Elephant",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 189,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 272,
+          "S2": 75399,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.50927734375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 51604,
+        "query": "If you want to smell like your grandma’s panty drawer…THIS is your fragrance! Enough said.",
+        "query_chars": 90,
+        "query_tokens": 30,
+        "gt": {
+          "asin": "B0BGXH92JS",
+          "title": "Caswell-Massey Men's Fragrance– Supernatural Vi New Updated Mens Cologne Infused With Scents of Citrus, Musk, and Amber – 3 Ounces",
+          "store": "Caswell-Massey",
+          "categories": [],
+          "train_reviews": 7,
+          "embedding_text_chars": 1192,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 1420,
+          "S2": 36699,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5927734375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 51925,
+        "query": "I used a brush glue on top of the provided glue tabs. I held each nail for 60 seconds. They lasted 10 days!",
+        "query_chars": 107,
+        "query_tokens": 32,
+        "gt": {
+          "asin": "B0B3X4TTV7",
+          "title": "Fruit Press on Nails Short Lemon & Lime Pattern Fake Nails Glossy French Yellow & Green Tip Design Full Cover Nail Tips Rhinestones Acrylic Nails Stick on Nails Manicure DIY for Women Girls 2Boxes",
+          "store": "DIUEWOW",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 204,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 1702,
+          "S2": 19536,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.703125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 52648,
+        "query": "The colors are nice but they won't stay on. Nails are flimsy",
+        "query_chars": 60,
+        "query_tokens": 20,
+        "gt": {
+          "asin": "B09Z779B1T",
+          "title": "SXC Cosmetics Gel X Nail Kit with Long Matte Frosted Coffin Nail Tips and Glue Gel Nail Art Extension Starter Kit (Red Series)",
+          "store": "SXC",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 134,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 4361,
+          "S2": 22133,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.609375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 53928,
+        "query": "Not of the best quality of hair to work with if it gets wet.",
+        "query_chars": 60,
+        "query_tokens": 17,
+        "gt": {
+          "asin": "B0967L3RGV",
+          "title": "FSONA 28inch Faux Locs Crochet Braids Lace Front Wig L Part Ear to Ear with Curly Ends Hair Braiding Wig with Baby Hair Lightweight Bouncy Dreadlocs for Women (1B)",
+          "store": "FSONA",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 295,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 36298,
+          "S2": 50448,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.51025390625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 53947,
+        "query": "Amazing scent just like I wanted.  Thank you for providing this product.",
+        "query_chars": 72,
+        "query_tokens": 17,
+        "gt": {
+          "asin": "B0BGMLG5RM",
+          "title": "Auric Blends - Egyptian Goddess Body Oil - Roll-On Perfume - 2 Pack",
+          "store": "Generic",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 786,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 4962,
+          "S2": 2411,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.59130859375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 55863,
+        "query": "Always my go style when I want something quick, cute, and affordable for an upcoming occasion. The pack bundle is more than enough and looks better over time. Definitely, has help me consider getting love in the future.",
+        "query_chars": 219,
+        "query_tokens": 50,
+        "gt": {
+          "asin": "B08BBQ29N5",
+          "title": "Niseyo new Faux Locs 24 Inch Crochet Hair 6 Packs 120 Strands Long Soft Ombre Natural Crochet Braids (24'' 6Pcs T27)",
+          "store": "Niseyo",
+          "categories": [],
+          "train_reviews": 87,
+          "embedding_text_chars": 124,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 3939,
+          "S2": 103801,
+          "S3": 54
+        },
+        "rescued_by": [
+          "S3"
+        ],
+        "S1_top1_score": 0.4677734375,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 56202,
+        "query": "When I first opened the package I thought it was a sample to test the color. The tiny lock of hair was way too small for a human head. I was very disappointed when I learned that this single weft with a few strands of hair was the actual product. These bangs are way too small to be usable.",
+        "query_chars": 290,
+        "query_tokens": 70,
+        "gt": {
+          "asin": "B0BHKV6QNZ",
+          "title": "Bangs Hair Clip in Bangs 100% Real Human Hair Extensions Wispy Bangs Clip Hairpieces for Women Clip on Air Bangs Curved Bangs for Daily Wear (Dark Reddish Brown)",
+          "store": "HOSYTIS",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 1463,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 247,
+          "S2": 768,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.5751953125,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 58254,
+        "query": "Item arrived completely smashed. Got a replacement, if was smashed as well. Never actually got to see these awesome colors.",
+        "query_chars": 123,
+        "query_tokens": 29,
+        "gt": {
+          "asin": "B0BFKVH91X",
+          "title": "wet n wild Fantasy Makers Halloween 10 Pan Palette Hallow-Queen",
+          "store": "wet n wild",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 789,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 928,
+          "S2": 53456,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.57275390625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 60997,
+        "query": "Goes on white, but blends in clear. I love it! Still reapply after sweating or going in water, but the coverage works well.",
+        "query_chars": 123,
+        "query_tokens": 35,
+        "gt": {
+          "asin": "B0B88X2FK4",
+          "title": "Hook Ya Sport Non-Nano Mineral Sunscreen 3oz, 2 Pack 6oz Total, Reef Safe, UVA/UVB Protection, Octinoxate & Oxybenzone Free, Bait Safe, Boat Safe, Non-Greasy, No Fragrance, Ultralight Finish, Approved for use in Hawaii and Mexico, Made in the USA",
+          "store": "Hook'Ya",
+          "categories": [],
+          "train_reviews": 0,
+          "embedding_text_chars": 1950,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 467,
+          "S2": 8314,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.63525390625,
+        "S1_top1_same_store": false
+      },
+      {
+        "query_idx": 61246,
+        "query": "Simply put, my hair has never looked better! My curls are back, my ends are stronger, and my hair doesn't seem to dry out as fast. I was blown away the first time I used this. I can't vogue for other hair types but if you have naturally wavy hair, you should give this a try!",
+        "query_chars": 275,
+        "query_tokens": 78,
+        "gt": {
+          "asin": "B097BSKSQW",
+          "title": "Verb Ghost Shampoo & Conditioner Duo – Vegan Shampoo and Conditioner Set –– Weightless, Anti-Frizz Hydrating Shampoo and Conditioner Promotes Shine and Strength",
+          "store": null,
+          "categories": [],
+          "train_reviews": 153,
+          "embedding_text_chars": 168,
+          "n_review_keywords": 0
+        },
+        "rank": {
+          "S1": 2404,
+          "S2": 47851,
+          "S3": 0
+        },
+        "rescued_by": [],
+        "S1_top1_score": 0.58447265625,
+        "S1_top1_same_store": false
+      }
+    ]
+  }
+}

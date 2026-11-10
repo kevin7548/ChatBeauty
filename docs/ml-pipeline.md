@@ -65,7 +65,9 @@ python -m ml.pipeline.run \
 - Embedding text = `[Title]` + `[Review Keywords]` (Llama 3.1, WHO/WHEN/WHY) +
   `[Description Summary]` (Llama 3.1) + `[Features]`.
 - Adopted (review-based): ~1M pairs, 2 epochs, batch 32, dim 1024.
-  **Valid Recall@100 0.2015 → 0.3543**, Test Recall@100 0.3728.
+  **Valid Recall@100 0.176 (zero-shot) → 0.334, Test 0.176 → 0.341** (exact search, current corpus; `experiments/B/RESULTS.md`).
+  The older 0.2015 → 0.3543 / Test 0.3728 came from a ChromaDB-era index whose item text likely
+  leaked valid/test-period review keywords; do not use them.
 - Embeddings are computed by `ml/scripts/embed_products.py` and written to the `embedding`
   column; build the HNSW index afterwards ([db-schema.md](db-schema.md)).
 

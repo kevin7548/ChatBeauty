@@ -1,0 +1,162 @@
+{
+ "labeled_by": "Claude, from query text + ground-truth item + S1 top-3 (owner should review)",
+ "types": {
+  "generic_query": "쿼리가 상품을 특정하지 않음 (만족/불만/배송만 언급, 최대 카테고리 수준)",
+  "similar_product": "유사 상품 혼동 (S1 상위가 같은 유형의 다른 상품)",
+  "thin_item_text": "상품 텍스트 빈약 (제목 위주 100자 안팎, 쿼리 속성이 텍스트에 없음)",
+  "vocab_mismatch": "용도·어휘 불일치 (반려동물용/비뷰티 상품을 다른 의미로 언급 등)",
+  "query_truncation": "쿼리 512토큰 잘림 — 50건 중 0건 (전체 누락의 0.08%)"
+ },
+ "labels": {
+  "4057": {
+   "type": "similar_product"
+  },
+  "4316": {
+   "type": "generic_query"
+  },
+  "5440": {
+   "type": "similar_product"
+  },
+  "5659": {
+   "type": "similar_product"
+  },
+  "5849": {
+   "type": "generic_query"
+  },
+  "5981": {
+   "type": "similar_product"
+  },
+  "8164": {
+   "type": "generic_query"
+  },
+  "10548": {
+   "type": "vocab_mismatch"
+  },
+  "11617": {
+   "type": "generic_query"
+  },
+  "12831": {
+   "type": "generic_query"
+  },
+  "14432": {
+   "type": "similar_product"
+  },
+  "17559": {
+   "type": "thin_item_text"
+  },
+  "22518": {
+   "type": "similar_product"
+  },
+  "23578": {
+   "type": "similar_product"
+  },
+  "25564": {
+   "type": "similar_product"
+  },
+  "27537": {
+   "type": "thin_item_text"
+  },
+  "27872": {
+   "type": "similar_product"
+  },
+  "28181": {
+   "type": "similar_product"
+  },
+  "28327": {
+   "type": "vocab_mismatch"
+  },
+  "28604": {
+   "type": "similar_product"
+  },
+  "28624": {
+   "type": "similar_product"
+  },
+  "31751": {
+   "type": "similar_product"
+  },
+  "32561": {
+   "type": "similar_product"
+  },
+  "33370": {
+   "type": "similar_product"
+  },
+  "34566": {
+   "type": "similar_product"
+  },
+  "35120": {
+   "type": "similar_product"
+  },
+  "39917": {
+   "type": "similar_product"
+  },
+  "40651": {
+   "type": "similar_product"
+  },
+  "41273": {
+   "type": "generic_query"
+  },
+  "42785": {
+   "type": "generic_query"
+  },
+  "43978": {
+   "type": "similar_product"
+  },
+  "44198": {
+   "type": "similar_product"
+  },
+  "45186": {
+   "type": "generic_query"
+  },
+  "46272": {
+   "type": "vocab_mismatch"
+  },
+  "47690": {
+   "type": "similar_product"
+  },
+  "47848": {
+   "type": "thin_item_text"
+  },
+  "48623": {
+   "type": "similar_product"
+  },
+  "48956": {
+   "type": "similar_product"
+  },
+  "49117": {
+   "type": "generic_query"
+  },
+  "49395": {
+   "type": "similar_product"
+  },
+  "51662": {
+   "type": "similar_product"
+  },
+  "51975": {
+   "type": "similar_product"
+  },
+  "52676": {
+   "type": "generic_query"
+  },
+  "53845": {
+   "type": "generic_query"
+  },
+  "53867": {
+   "type": "generic_query"
+  },
+  "55621": {
+   "type": "similar_product"
+  },
+  "55999": {
+   "type": "similar_product"
+  },
+  "58039": {
+   "type": "generic_query"
+  },
+  "60771": {
+   "type": "generic_query"
+  },
+  "61029": {
+   "type": "similar_product"
+  }
+ }
+}

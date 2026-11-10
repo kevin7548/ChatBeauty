@@ -143,8 +143,10 @@ Raw review 텍스트를 query로, item의 `embedding_text`를 positive로 사용
 | Epochs | 2 |
 | Batch Size | 32 |
 | Embedding Dim | 1024 |
-| **Valid Recall@100** | 0.2015 → **0.3543** |
-| **Test Recall@100** | **0.3728** |
+| **Valid Recall@100** | 0.176 (zero-shot) → **0.334** |
+| **Test Recall@100** | 0.176 (zero-shot) → **0.341** |
+
+> 2026-10-25(valid)와 2026-11-03(test)에 같은 조건(정확 검색, 현재 코퍼스, 각 62,669 쿼리)으로 측정한 값이다(`experiments/B/RESULTS.md`). 기존 수치(0.2015 → 0.3543, Test 0.3728)는 ChromaDB 시절 인덱스에서 나왔고, 상품 텍스트에 valid·test 기간 리뷰 키워드가 섞였을 가능성이 커서 더 이상 쓰지 않는다.
 
 **Fine-tuning 방법 B — Generated Query (실험)**
 

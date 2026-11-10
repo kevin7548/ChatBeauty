@@ -1,0 +1,145 @@
+{
+  "split": "valid (eval split: reviews >= 20 chars, timestamp 80/10/10)",
+  "n_queries": 62669,
+  "n_items": 112589,
+  "gt_in_corpus": 62669,
+  "sources": {
+    "S1": {
+      "desc": "fine-tuned BGE-M3 (flat)",
+      "recall@10": 0.1344045700426048,
+      "recall@50": 0.2621710893743318,
+      "recall@100": 0.3343918045604685,
+      "mrr@100": 0.07322699416960975
+    },
+    "S2": {
+      "desc": "zero-shot BAAI/bge-m3 (flat)",
+      "recall@10": 0.07212497407011441,
+      "recall@50": 0.13627152180503918,
+      "recall@100": 0.17643491997638386,
+      "mrr@100": 0.04180762859747837
+    },
+    "S3": {
+      "desc": "BM25 (title + raw description + features + categories + raw train-period reviews)",
+      "recall@10": 0.12543681884185162,
+      "recall@50": 0.20577957203721137,
+      "recall@100": 0.24812905902439802,
+      "mrr@100": 0.07279239618944816
+    },
+    "S1ann": {
+      "desc": "fine-tuned BGE-M3 (serving HNSW, B0)",
+      "recall@10": 0.14669134659879685,
+      "recall@50": 0.27946831766902297,
+      "recall@100": 0.35428999984043147,
+      "mrr@100": 0.07952618271848454
+    },
+    "S3emb": {
+      "desc": "BM25 (embedding_text: LLM review keywords + description summary)",
+      "recall@10": 0.05715744626529863,
+      "recall@50": 0.11664459302047264,
+      "recall@100": 0.15963235411447446,
+      "mrr@100": 0.030836912431415633
+    },
+    "S3rev20raw": {
+      "desc": "BM25 (S3 with only the 20 most recent train reviews per product)",
+      "recall@10": 0.10312913880866138,
+      "recall@50": 0.1847963107756626,
+      "recall@100": 0.229491455105395,
+      "mrr@100": 0.05790109620674915
+    },
+    "S3tdcraw": {
+      "desc": "BM25 (title + raw description + features + categories, no reviews)",
+      "recall@10": 0.05021621535368364,
+      "recall@50": 0.10379932662081731,
+      "recall@100": 0.14035647608865628,
+      "mrr@100": 0.027743881815795256
+    }
+  },
+  "runs": {
+    "S1": {
+      "source": "S1",
+      "model_path": "/root/.cache/huggingface/hub/models--kevin7548--chatbeauty-models/snapshots/121f36b93250dd5eaf538246eb23671c4e01f83f/retrieval/bge-m3-finetuned-20260202-120852",
+      "device": "cuda",
+      "fp16": true,
+      "max_seq_length": 512,
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "items": 776.8,
+        "queries": 165.3,
+        "search": 5.3
+      },
+      "recall@100": 0.3343918045604685,
+      "gt_in_corpus": 62669
+    },
+    "S2": {
+      "source": "S2",
+      "model_path": "BAAI/bge-m3",
+      "device": "cuda",
+      "fp16": true,
+      "max_seq_length": 512,
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "items": 849.5,
+        "queries": 166.3,
+        "search": 5.4
+      },
+      "recall@100": 0.17643491997638386,
+      "gt_in_corpus": 62669
+    },
+    "S3": {
+      "source": "S3",
+      "fields": "tdcr",
+      "max_reviews": null,
+      "description": "raw",
+      "bm25": "bm25s Lucene k1=1.5 b=0.75, en stopwords, Snowball english stemmer",
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "index": 10.3,
+        "search": 45.3
+      },
+      "recall@100": 0.24812905902439802
+    },
+    "S3emb": {
+      "source": "S3emb",
+      "fields": "embedding_text",
+      "bm25": "bm25s Lucene k1=1.5 b=0.75, en stopwords, Snowball english stemmer",
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "index": 5.7,
+        "search": 30.9
+      },
+      "recall@100": 0.15963235411447446
+    },
+    "S3rev20raw": {
+      "source": "S3rev20raw",
+      "fields": "tdcr",
+      "max_reviews": 20,
+      "description": "raw",
+      "bm25": "bm25s Lucene k1=1.5 b=0.75, en stopwords, Snowball english stemmer",
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "index": 9.0,
+        "search": 46.1
+      },
+      "recall@100": 0.229491455105395
+    },
+    "S3tdcraw": {
+      "source": "S3tdcraw",
+      "fields": "tdc",
+      "max_reviews": null,
+      "description": "raw",
+      "bm25": "bm25s Lucene k1=1.5 b=0.75, en stopwords, Snowball english stemmer",
+      "n_items": 112589,
+      "n_queries": 62669,
+      "seconds": {
+        "index": 3.3,
+        "search": 26.2
+      },
+      "recall@100": 0.14035647608865628
+    }
+  }
+}

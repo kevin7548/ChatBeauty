@@ -2,6 +2,8 @@
 
 > 기준: `main` @ `e7cb606` (2026-10-12). 코드는 수정하지 않았습니다.
 >
+> **⚠ 2026-11-02 갱신:** 이 문서의 Retrieval 수치(Valid Recall@100 0.3543, Test 0.3728, 베이스 0.2015)는 ChromaDB 시절 후보 파일에서 나온 값입니다. 상품 텍스트에 valid·test 기간 리뷰 키워드가 섞였을 가능성이 커서 더 이상 기준값으로 쓰지 않습니다. 누수 없는 값은 같은 조건(정확 검색, 현재 코퍼스)에서 **파인튜닝 0.334, zero-shot 0.176**입니다(`experiments/B/RESULTS.md`, `experiments/results/B_B0_check.json`). 아래 기록은 당시 기준 그대로 둡니다.
+>
 > **근거를 어디서 가져왔는지 먼저 밝힙니다.** BGE-M3 파인튜닝 코드와 FAISS 인덱스 빌드 코드는 레포에 없습니다.
 > 그래서 Stage 1의 학습 설정은 다음 세 곳을 읽고 다시 맞춰 봤습니다.
 > - 모델 디렉토리의 sentence-transformers 자동 생성 카드: `ml/model/retrieval/bge-m3-finetuned-20260202-120852/README.md`

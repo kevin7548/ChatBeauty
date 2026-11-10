@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="-apple-system,Helvetica,Arial,sans-serif">
+<rect width="760" height="440" fill="#fcfcfb"/>
+<text x="70" y="26" font-size="15" fill="#0b0b0b">Recall@100 by product review count (valid, 62,669 queries)</text>
+<rect x="70" y="42" width="10" height="10" rx="2" fill="#2a78d6"/>
+<text x="85" y="51" font-size="12" fill="#52514e">Fine-tuned BGE-M3</text>
+<rect x="221.2" y="42" width="10" height="10" rx="2" fill="#eb6834"/>
+<text x="236.2" y="51" font-size="12" fill="#52514e">Zero-shot BGE-M3</text>
+<rect x="365.79999999999995" y="42" width="10" height="10" rx="2" fill="#1baf7a"/>
+<text x="380.79999999999995" y="51" font-size="12" fill="#52514e">BM25 (raw reviews)</text>
+<line x1="70" x2="730" y1="370.0" y2="370.0" stroke="#e4e3df"/>
+<text x="62" y="374.0" font-size="11" fill="#52514e" text-anchor="end">0.0</text>
+<line x1="70" x2="730" y1="328.6" y2="328.6" stroke="#e4e3df"/>
+<text x="62" y="332.6" font-size="11" fill="#52514e" text-anchor="end">0.1</text>
+<line x1="70" x2="730" y1="287.1" y2="287.1" stroke="#e4e3df"/>
+<text x="62" y="291.1" font-size="11" fill="#52514e" text-anchor="end">0.2</text>
+<line x1="70" x2="730" y1="245.7" y2="245.7" stroke="#e4e3df"/>
+<text x="62" y="249.7" font-size="11" fill="#52514e" text-anchor="end">0.3</text>
+<line x1="70" x2="730" y1="204.3" y2="204.3" stroke="#e4e3df"/>
+<text x="62" y="208.3" font-size="11" fill="#52514e" text-anchor="end">0.4</text>
+<line x1="70" x2="730" y1="162.9" y2="162.9" stroke="#e4e3df"/>
+<text x="62" y="166.9" font-size="11" fill="#52514e" text-anchor="end">0.5</text>
+<line x1="70" x2="730" y1="121.4" y2="121.4" stroke="#e4e3df"/>
+<text x="62" y="125.4" font-size="11" fill="#52514e" text-anchor="end">0.6</text>
+<line x1="70" x2="730" y1="80.0" y2="80.0" stroke="#e4e3df"/>
+<text x="62" y="84.0" font-size="11" fill="#52514e" text-anchor="end">0.7</text>
+<g><rect x="99.5" y="262.5" width="34" height="107.5" rx="4" fill="#2a78d6"/><rect x="99.5" y="266.5" width="34" height="103.5" fill="#2a78d6"/><title>Fine-tuned BGE-M3, 0 reviews: Recall@100 0.259</title></g>
+<text x="116.5" y="256.5" font-size="11" fill="#0b0b0b" text-anchor="middle">0.26</text>
+<g><rect x="135.5" y="334.4" width="34" height="35.6" rx="4" fill="#eb6834"/><rect x="135.5" y="338.4" width="34" height="31.6" fill="#eb6834"/><title>Zero-shot BGE-M3, 0 reviews: Recall@100 0.086</title></g>
+<text x="152.5" y="328.4" font-size="11" fill="#0b0b0b" text-anchor="middle">0.09</text>
+<g><rect x="171.5" y="346.2" width="34" height="23.8" rx="4" fill="#1baf7a"/><rect x="171.5" y="350.2" width="34" height="19.8" fill="#1baf7a"/><title>BM25 (raw reviews), 0 reviews: Recall@100 0.057</title></g>
+<text x="188.5" y="340.2" font-size="11" fill="#0b0b0b" text-anchor="middle">0.06</text>
+<text x="152.5" y="388" font-size="12" fill="#0b0b0b" text-anchor="middle">0</text>
+<text x="152.5" y="404" font-size="11" fill="#52514e" text-anchor="middle">39% of queries</text>
+<g><rect x="264.5" y="299.3" width="34" height="70.7" rx="4" fill="#2a78d6"/><rect x="264.5" y="303.3" width="34" height="66.7" fill="#2a78d6"/><title>Fine-tuned BGE-M3, 1-4 reviews: Recall@100 0.171</title></g>
+<text x="281.5" y="293.3" font-size="11" fill="#0b0b0b" text-anchor="middle">0.17</text>
+<g><rect x="300.5" y="305.3" width="34" height="64.7" rx="4" fill="#eb6834"/><rect x="300.5" y="309.3" width="34" height="60.7" fill="#eb6834"/><title>Zero-shot BGE-M3, 1-4 reviews: Recall@100 0.156</title></g>
+<text x="317.5" y="299.3" font-size="11" fill="#0b0b0b" text-anchor="middle">0.16</text>
+<g><rect x="336.5" y="316.9" width="34" height="53.1" rx="4" fill="#1baf7a"/><rect x="336.5" y="320.9" width="34" height="49.1" fill="#1baf7a"/><title>BM25 (raw reviews), 1-4 reviews: Recall@100 0.128</title></g>
+<text x="353.5" y="310.9" font-size="11" fill="#0b0b0b" text-anchor="middle">0.13</text>
+<text x="317.5" y="388" font-size="12" fill="#0b0b0b" text-anchor="middle">1-4</text>
+<text x="317.5" y="404" font-size="11" fill="#52514e" text-anchor="middle">20% of queries</text>
+<g><rect x="429.5" y="198.9" width="34" height="171.1" rx="4" fill="#2a78d6"/><rect x="429.5" y="202.9" width="34" height="167.1" fill="#2a78d6"/><title>Fine-tuned BGE-M3, 5-19 reviews: Recall@100 0.413</title></g>
+<text x="446.5" y="192.9" font-size="11" fill="#0b0b0b" text-anchor="middle">0.41</text>
+<g><rect x="465.5" y="263.1" width="34" height="106.9" rx="4" fill="#eb6834"/><rect x="465.5" y="267.1" width="34" height="102.9" fill="#eb6834"/><title>Zero-shot BGE-M3, 5-19 reviews: Recall@100 0.258</title></g>
+<text x="482.5" y="257.1" font-size="11" fill="#0b0b0b" text-anchor="middle">0.26</text>
+<g><rect x="501.5" y="226.7" width="34" height="143.3" rx="4" fill="#1baf7a"/><rect x="501.5" y="230.7" width="34" height="139.3" fill="#1baf7a"/><title>BM25 (raw reviews), 5-19 reviews: Recall@100 0.346</title></g>
+<text x="518.5" y="220.7" font-size="11" fill="#0b0b0b" text-anchor="middle">0.35</text>
+<text x="482.5" y="388" font-size="12" fill="#0b0b0b" text-anchor="middle">5-19</text>
+<text x="482.5" y="404" font-size="11" fill="#52514e" text-anchor="middle">18% of queries</text>
+<g><rect x="594.5" y="149.9" width="34" height="220.1" rx="4" fill="#2a78d6"/><rect x="594.5" y="153.9" width="34" height="216.1" fill="#2a78d6"/><title>Fine-tuned BGE-M3, 20+ reviews: Recall@100 0.531</title></g>
+<text x="611.5" y="143.9" font-size="11" fill="#0b0b0b" text-anchor="middle">0.53</text>
+<g><rect x="630.5" y="254.4" width="34" height="115.6" rx="4" fill="#eb6834"/><rect x="630.5" y="258.4" width="34" height="111.6" fill="#eb6834"/><title>Zero-shot BGE-M3, 20+ reviews: Recall@100 0.279</title></g>
+<text x="647.5" y="248.4" font-size="11" fill="#0b0b0b" text-anchor="middle">0.28</text>
+<g><rect x="666.5" y="129.2" width="34" height="240.8" rx="4" fill="#1baf7a"/><rect x="666.5" y="133.2" width="34" height="236.8" fill="#1baf7a"/><title>BM25 (raw reviews), 20+ reviews: Recall@100 0.581</title></g>
+<text x="683.5" y="123.2" font-size="11" fill="#0b0b0b" text-anchor="middle">0.58</text>
+<text x="647.5" y="388" font-size="12" fill="#0b0b0b" text-anchor="middle">20+</text>
+<text x="647.5" y="404" font-size="11" fill="#52514e" text-anchor="middle">24% of queries</text>
+<text x="400.0" y="430" font-size="12" fill="#52514e" text-anchor="middle">Reviews of the ground-truth product in the train period (80%)</text>
+<text transform="translate(18,225.0) rotate(-90)" font-size="12" fill="#52514e" text-anchor="middle">Recall@100</text>
+</svg>
