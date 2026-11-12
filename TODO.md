@@ -8,14 +8,14 @@ down 2026-06-02. Deploy runbook: [`deploy/hf-space/DEPLOY.md`](deploy/hf-space/D
 overview: [`docs/deployment.md`](docs/deployment.md).
 
 The **Current focus** below is the active roadmap, ordered as an execution queue and tagged per
-agent/window so it doubles as a dispatch board; the **Backlog** holds documented limitations and
+window so it doubles as a dispatch board; the **Backlog** holds documented limitations and
 longer-horizon ideas.
 
 Detailed rationale for the documented limitations lives in
 [`docs/architecture.md#known-limitations--future-work`](docs/architecture.md#known-limitations--future-work).
 
-**Domain tags:** `[backend]` `[ml]` `[db]` `[deploy]` `[frontend]` `[test]` — map to the
-domain agents in `.claude/agents/`.
+**Domain tags:** `[backend]` `[ml]` `[db]` `[deploy]` `[frontend]` `[test]` — label which part
+of the codebase an item touches.
 
 ---
 

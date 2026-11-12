@@ -1,25 +1,22 @@
 # CLAUDE.md
 
-## Agent Workflow
+## Workflow
 
-Use a task-type router to decide how to handle each request:
+Work one task at a time, sized to a single item in `TODO.md`: one conversation per task, scoped
+to the files that task needs. Domain tags in `TODO.md` (`[backend]`, `[ml]`, ...) only label
+which part of the codebase an item touches; they are not separate agents. Cross-cutting changes
+(db + backend + ml) stay in one conversation so context flows across layers.
 
-| Task type | Example | Mode |
-|---|---|---|
-| Single-domain | "Fix broken button styling" | Spawn the relevant domain agent |
-| Cross-cutting feature | "Add new recommendation filter" | Single main-agent conversation — context must flow across layers |
-| Parallel independent | "Update embeddings + fix UI bug" | Two domain agents in parallel |
-| Architectural change | "Switch retrieval index to HNSW" | Main conversation only |
+Scope is controlled by fixed rules and automated checks rather than by splitting work across
+agents:
 
-**Domain agents** (defined in `.claude/agents/`):
-
-| Agent | Directory | Scope |
-|---|---|---|
-| `frontend` | `frontend/` | React, TypeScript, Vite, Vercel |
-| `backend` | `backend/app/` | FastAPI routes, retrieval/reranking/explanation services |
-| `db` | `backend/sql/` | PostgreSQL, pgvector, HNSW index, schema |
-| `ml` | `ml/` | BGE-M3 fine-tuning, LightGBM, Apache Beam pipeline |
-| `deploy` | `deploy/`, `backend/Dockerfile`, `backend/docker-compose.yml` | Free-tier: Supabase, local/free-host backend, Vercel (paid GCP retired 2026-06-02) |
+- **Fixed invariants:** the explanation step is one Gemini call for all 5 products; embeddings
+  stay 1024-dimensional (BGE-M3). Do not change these without an explicit decision.
+- **PR only:** every change lands through a pull request, never a direct push to `main`.
+- **CI gate:** the `POST /recommend` integration test in `.github/workflows/ci.yml` must pass
+  before merge.
+- **Evaluation scripts:** before trusting a new or changed evaluation script, reproduce a known
+  baseline number with it first.
 
 ## Architecture
 

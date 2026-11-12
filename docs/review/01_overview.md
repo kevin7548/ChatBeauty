@@ -31,7 +31,7 @@ ChatBeauty는 "사용자 상황 텍스트 → 뷰티 상품 Top-5 + 추천 이�
 
 ```
 ChatBeauty/
-├── CLAUDE.md                 # Claude Code용 프로젝트 지침 (도메인 에이전트 라우팅 표, 아키텍처 요약)
+├── CLAUDE.md                 # Claude Code용 프로젝트 지침 (작업 단위 진행 규칙, 아키텍처 요약)
 ├── README.md / README.ko.md  # 프로젝트 소개(영/한): 파이프라인, 모델 지표, 기술 스택, 데모
 ├── TODO.md                   # 남은 작업의 단일 출처 (라이브 URL, 로드맵)
 ├── .gitignore                # 루트 규칙: .env*, ml/data/**, ml/model/**, *.pkl/*.safetensors/*.jsonl 등 제외
@@ -43,7 +43,6 @@ ChatBeauty/
 │   └── pull_request_template.md  # PR 템플릿
 │
 ├── .claude/
-│   ├── agents/{frontend,backend,db,ml,deploy}.md  # 도메인 서브에이전트 정의
 │   ├── hooks/                    # (미추적) 작업 완료 알림 스크립트
 │   ├── settings.local.json       # 로컬 권한 설정
 │   └── worktrees/kind-turing-6714e5/  # ⚠️ 오래된 git worktree (구 코드 사본, backend/ml 등 중복) — 검색 시 노이즈
@@ -331,8 +330,7 @@ Vite가 빌드 시점에 `VITE_` 접두사 변수만 번들에 넣습니다. 프
 5. **API 계약 불일치:** 프론트는 `top_k: 5`를 보내지만 `RecommendRequest`에는 `top_k`가 없어 무시되고,
    라우트에서 `top_k=5`로 하드코딩합니다. 프론트 `RecommendResponse` 타입에는 `latency` 필드가 없습니다.
 6. **오래된 서술:** `frontend/src/api/recommend.ts`의 warmUp 주석(Cloud Run min-instances=0),
-   `retrieval_resources.py` 독스트링("pgvector similarity search"), `.claude/agents/backend.md`
-   ("pgvector HNSW"), `.env.example`("GCS volume mount"), `embed_products.py` 종료 로그("Cloud SQL Studio"),
+   `retrieval_resources.py` 독스트링("pgvector similarity search"), `.env.example`("GCS volume mount"), `embed_products.py` 종료 로그("Cloud SQL Studio"),
    `deploy/setup-gcp.sh`, `embed_products_colab.ipynb`가 아직 GCP·pgvector 시절 기준입니다.
 7. **미사용 의존성:** `pgvector`, `requests`(backend `app/` 기준).
 8. **`.claude/worktrees/kind-turing-6714e5/`** 에 구 코드 사본이 있어 전역 grep 결과를 오염시킵니다.
